@@ -2,7 +2,9 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Smart Home IUT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home IUT - Contr&ocirc;le & S&eacute;curit&eacute;</title>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
@@ -14,130 +16,165 @@
             --blue: #3498db;
             --yellow: #f1c40f;
             --orange: #e67e22;
+            --red: #e74c3c;
             --text: #2d3436;
         }
 
         body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
-            color: var(--text);
-            margin: 0; padding: 20px; text-align: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #e9ecef; color: var(--text); margin: 0; padding: 20px; 
         }
 
-        .status-bar {
-            background: white; padding: 10px 25px; border-radius: 50px;
-            display: inline-block; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            font-weight: bold; color: var(--green);
+        h1 { margin-bottom: 10px; color: #2c3e50; }
+
+        .banner {
+            background: white; padding: 15px; border-radius: 12px;
+            margin: 0 auto 20px auto; max-width: 800px;
+            font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: 0.3s; border-left: 10px solid var(--green);
         }
 
         .container { 
             display: flex; flex-wrap: wrap; justify-content: center; 
-            gap: 20px; max-width: 1000px; margin: 0 auto; 
+            gap: 20px; max-width: 1100px; margin: 0 auto; 
         }
         
         .card { 
-            background: var(--card-bg); border-radius: 20px; padding: 20px; 
-            width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            border-top: 5px solid var(--blue);
+            background: var(--card-bg); border-radius: 15px; padding: 20px; 
+            width: 300px; box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border-top: 5px solid var(--blue); position: relative;
         }
 
-        .card-h1 { border-color: var(--green); }
-        .card-nrj { border-color: var(--yellow); width: 100%; max-width: 600px; }
-        .card-ctrl { border-color: var(--orange); width: 100%; max-width: 600px; }
-
-        h3 { margin-top: 0; color: #636e72; font-size: 1em; text-transform: uppercase; }
+        .card-secu { border-color: var(--red); width: 100%; max-width: 450px; }
+        .card-ctrl { border-color: var(--orange); width: 100%; max-width: 450px; }
+        .card-nrj { border-color: var(--yellow); width: 100%; max-width: 930px; }
 
         .data-box {
-            background: #f8f9fa; margin: 8px 0; padding: 12px;
-            border-radius: 12px; display: flex; justify-content: space-between; align-items: center;
+            background: #f8f9fa; margin: 10px 0; padding: 12px;
+            border-radius: 10px; display: flex; justify-content: space-between; align-items: center;
         }
 
-        .valeur { font-size: 1.2em; font-weight: bold; }
+        .label { color: #7f8c8d; font-size: 0.9em; font-weight: 600; }
+        .value { font-size: 1.2em; font-weight: bold; color: var(--blue); }
 
-        /* Styles des Boutons */
+        /* Boutons */
         .btn {
-            padding: 10px 20px; border-radius: 10px; border: none; 
-            font-weight: bold; cursor: pointer; transition: 0.3s;
+            padding: 12px 24px; border-radius: 8px; border: none; 
+            font-weight: bold; cursor: pointer; transition: 0.3s; margin: 5px;
         }
-        .btn-mode { background: var(--green); color: white; width: 120px; }
+        .btn-mode { background: var(--green); color: white; min-width: 140px; }
+        .btn-secu { background: #95a5a6; color: white; width: 100%; font-size: 1.1em; }
+        .btn-secu.active { background: var(--red); box-shadow: 0 0 15px rgba(231, 76, 60, 0.5); }
         .btn-led { background: white; border: 2px solid var(--blue); color: var(--blue); }
         .btn-led:active { transform: scale(0.95); }
         .btn-led:disabled { opacity: 0.3; cursor: not-allowed; }
 
-        .danger { background: #ff7675 !important; animation: blink 1s infinite; }
-        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.5;} 100% {opacity: 1;} }
+        /* Alerte Intrusion */
+        .intrusion-mode { 
+            background: var(--red) !important; color: white !important; 
+            animation: pulse-red 0.8s infinite; 
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
 
-    <h1>🏠 Dashboard &Eacute;co-Maison</h1>
-    <div class="status-bar" id="etat">Connexion...</div>
+    <h1>🏠 Dashboard Eco-Maison Connect&eacute;e</h1>
+    <div id="banner" class="banner">Chargement des donn&eacute;es...</div>
 
     <div class="container">
-        <div class="card card-h1">
-            <h3>Chambre 1</h3>
-            <div class="data-box"><span>Temp&eacute;rature</span><span class="valeur"><span id="t1">--</span>°C</span></div>
-            <div class="data-box"><span>Humidit&eacute;</span><span class="valeur"><span id="h1">--</span>%</span></div>
-            <div class="data-box"><span>Luminosit&eacute;</span><span class="valeur"><span id="l1">--</span> lx</span></div>
-            <div class="data-box"><span>Pr&eacute;sence</span><span class="valeur"><span id="p1">--</span> pers</span></div>
-        </div>
-
-        <div class="card">
-            <h3>Chambre 2</h3>
-            <div class="data-box"><span>Temp&eacute;rature</span><span class="valeur"><span id="t2">--</span>°C</span></div>
-            <div class="data-box"><span>Humidit&eacute;</span><span class="valeur"><span id="h2">--</span>%</span></div>
-            <div class="data-box"><span>Luminosit&eacute;</span><span class="valeur"><span id="l2">--</span> lx</span></div>
-            <div class="data-box"><span>Pr&eacute;sence</span><span class="valeur"><span id="p2">--</span> pers</span></div>
-        </div>
-
-        <div class="card card-nrj">
-            <h3>Consommation &Eacute;nerg&eacute;tique</h3>
-            <div style="display: flex; gap: 15px;">
-                <div class="data-box" id="box-pow" style="flex:1;"><span>Puissance</span><span class="valeur"><span id="pow">--</span> W</span></div>
-                <div class="data-box" style="flex:1;"><span>Courant</span><span class="valeur"><span id="cur">--</span> mA</span></div>
-            </div>
+        
+        <div class="card card-secu">
+            <h3>🛡️ Bouclier de S&eacute;curit&eacute;</h3>
+            <p style="font-size: 0.85em; color: #636e72;">Activez ce mode pour recevoir une alerte si quelqu'un entre.</p>
+            <button id="btnSecu" class="btn btn-secu" onclick="toggleSecurity()">S&Eacute;CURIT&Eacute; D&Eacute;SACTIV&Eacute;E</button>
         </div>
 
         <div class="card card-ctrl">
-            <h3>Contr&ocirc;le Manuel</h3>
+            <h3>🎮 Mode Manuel / Auto</h3>
             <div class="data-box">
-                <span>Mode Syst&egrave;me :</span>
+                <span class="label">Syst&egrave;me :</span>
                 <button id="btnMode" class="btn btn-mode" onclick="toggleMode()">AUTO</button>
             </div>
-            <div id="ledControls" style="display: flex; justify-content: space-around; padding-top: 10px;">
+            <div id="ledControls" style="display: flex; justify-content: space-around;">
                 <div>
-                    <p style="font-size: 0.8em;">CHAMBRE 1</p>
+                    <span class="label">Chambre 1</span><br>
                     <button onclick="setLed('L1', true)" class="btn btn-led">ON</button>
                     <button onclick="setLed('L1', false)" class="btn btn-led">OFF</button>
                 </div>
                 <div>
-                    <p style="font-size: 0.8em;">CHAMBRE 2</p>
+                    <span class="label">Chambre 2</span><br>
                     <button onclick="setLed('L2', true)" class="btn btn-led">ON</button>
                     <button onclick="setLed('L2', false)" class="btn btn-led">OFF</button>
                 </div>
             </div>
         </div>
+
+        <div class="card">
+            <h3 style="border-bottom: 2px solid var(--green); padding-bottom: 5px;">Chambre 1</h3>
+            <div class="data-box"><span class="label">Temp&eacute;rature</span><span class="value"><span id="t1">--</span>°C</span></div>
+            <div class="data-box"><span class="label">Humidit&eacute;</span><span class="value"><span id="h1">--</span>%</span></div>
+            <div class="data-box"><span class="label">Luminosit&eacute;</span><span class="value"><span id="l1">--</span> lx</span></div>
+            <div class="data-box"><span class="label">Pr&eacute;sence</span><span class="value"><span id="p1">--</span> pers</span></div>
+        </div>
+
+        <div class="card">
+            <h3 style="border-bottom: 2px solid var(--blue); padding-bottom: 5px;">Chambre 2</h3>
+            <div class="data-box"><span class="label">Temp&eacute;rature</span><span class="value"><span id="t2">--</span>°C</span></div>
+            <div class="data-box"><span class="label">Humidit&eacute;</span><span class="value"><span id="h2">--</span>%</span></div>
+            <div class="data-box"><span class="label">Luminosit&eacute;</span><span class="value"><span id="l2">--</span> lx</span></div>
+            <div class="data-box"><span class="label">Pr&eacute;sence</span><span class="value"><span id="p2">--</span> pers</span></div>
+        </div>
+
+        <div class="card card-nrj">
+            <h3>⚡ Suivi &Eacute;nerg&eacute;tique</h3>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div class="data-box" id="box-pow" style="flex: 1; min-width: 200px;">
+                    <span class="label">Puissance Instantan&eacute;e</span>
+                    <span class="value"><span id="pow">--</span> W</span>
+                </div>
+                <div class="data-box" style="flex: 1; min-width: 200px;">
+                    <span class="label">Intensit&eacute;</span>
+                    <span class="value"><span id="cur">--</span> mA</span>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // CONFIGURATION FIREBASE
+        // CONFIG FIREBASE
         const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref("maison");
 
-        // FONCTION : CHANGER DE MODE
+        // Demande d'autorisation notifications
+        if (Notification.permission !== "granted") { Notification.requestPermission(); }
+
+        // ACTIONS
         function toggleMode() {
-            const btn = document.getElementById("btnMode");
-            const newMode = (btn.innerText === "AUTO"); 
-            db.child("status").update({ modeManuel: newMode });
+            db.child("status").once('value').then(s => {
+                const cur = s.val().modeManuel || false;
+                db.child("status").update({ modeManuel: !cur });
+            });
         }
 
-        // FONCTION : ALLUMER/ETEINDRE LED
+        function toggleSecurity() {
+            db.child("status").once('value').then(s => {
+                const cur = s.val().modeSecu || false;
+                db.child("status").update({ modeSecu: !cur });
+            });
+        }
+
         function setLed(led, state) {
             db.child("status").update({ [led]: state });
         }
 
-        // LECTURE EN TEMPS RÉEL
+        // RECEPTION DONNEES
         db.on("value", (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
@@ -154,27 +191,45 @@
             document.getElementById("pow").innerText = data.energie.puissance;
             document.getElementById("cur").innerText = data.energie.courant;
 
-            // Alerte Energie
-            if(data.energie.puissance > 5) document.getElementById("box-pow").classList.add("danger");
-            else document.getElementById("box-pow").classList.remove("danger");
-
-            // Update Boutons Mode
+            // Logique Manuel / Auto
             const btnMode = document.getElementById("btnMode");
             const ledBtns = document.querySelectorAll(".btn-led");
-            
-            if(data.status.modeManuel) {
-                btnMode.innerText = "MANUEL";
-                btnMode.style.backgroundColor = "#e67e22";
+            if (data.status.modeManuel) {
+                btnMode.innerText = "MANUEL"; btnMode.style.backgroundColor = "var(--orange)";
                 ledBtns.forEach(b => b.disabled = false);
             } else {
-                btnMode.innerText = "AUTO";
-                btnMode.style.backgroundColor = "#2ecc71";
+                btnMode.innerText = "AUTO"; btnMode.style.backgroundColor = "var(--green)";
                 ledBtns.forEach(b => b.disabled = true);
             }
 
-            document.getElementById("etat").innerText = "● SYSTÈME SYNCHRONISÉ";
+            // Logique SÉCURITÉ
+            const btnSecu = document.getElementById("btnSecu");
+            const banner = document.getElementById("banner");
+            const totalPers = (data.chambre1.pers || 0) + (data.chambre2.pers || 0);
+
+            if (data.status.modeSecu) {
+                btnSecu.innerText = "SÉCURITÉ ACTIVÉE"; btnSecu.classList.add("active");
+                banner.innerText = "🛡️ SYSTÈME EN SURVEILLANCE"; banner.style.borderLeftColor = "var(--red)";
+
+                if (totalPers > 0) {
+                    banner.innerText = "🚨 ALERTE : INTRUSION DÉTECTÉE !";
+                    banner.classList.add("intrusion-mode");
+                    if (window.navigator.vibrate) window.navigator.vibrate([500, 200, 500]);
+                    if (Notification.permission === "granted") {
+                        new Notification("🚨 ALERTE SÉCURITÉ", { body: "Une personne est entrée dans la maison !" });
+                    }
+                } else {
+                    banner.classList.remove("intrusion-mode");
+                }
+            } else {
+                btnSecu.innerText = "SÉCURITÉ DÉSACTIVÉE"; btnSecu.classList.remove("active");
+                banner.innerText = "✅ SYSTÈME CONNECTÉ - OK"; banner.style.borderLeftColor = "var(--green)";
+                banner.classList.remove("intrusion-mode");
+            }
         });
     </script>
 </body>
 </html>
+</html>
+
 
