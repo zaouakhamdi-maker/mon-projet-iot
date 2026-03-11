@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Home IUT - Securit&eacute; Vocale</title>
+    <title>Smart Home PWA - IUT</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#e74c3c">
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -19,6 +22,7 @@
         .banner {
             background: white; padding: 15px; border-radius: 12px; max-width: 800px; margin: 0 auto 20px;
             font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 10px solid var(--green);
+            transition: 0.3s;
         }
 
         .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; max-width: 1000px; margin: 0 auto; }
@@ -43,8 +47,8 @@
 </head>
 <body>
 
-    <h1>🏠 Dashboard Eco-Maison</h1>
-    <div id="banner" class="banner">Initialisation...</div>
+    <h1>🏠 Dashboard Eco-Maison (PWA)</h1>
+    <div id="banner" class="banner">Connexion au syst&egrave;me...</div>
 
     <div class="container">
         <div class="card card-secu">
@@ -53,35 +57,44 @@
         </div>
 
         <div class="card card-ctrl">
-            <h3>🎮 Contr&ocirc;le des LEDs</h3>
+            <h3>🎮 Mode Manuel / Auto</h3>
             <div class="data-box">
                 <span>Mode :</span>
                 <button id="btnMode" class="btn btn-mode" onclick="toggleMode()">AUTO</button>
             </div>
             <div style="display: flex; justify-content: space-around;">
-                <button onclick="setLed('L1', true)" class="btn btn-led">CH1 ON</button>
-                <button onclick="setLed('L1', false)" class="btn btn-led">CH1 OFF</button>
+                <div>
+                    <button onclick="setLed('L1', true)" class="btn btn-led">CH1 ON</button>
+                    <button onclick="setLed('L1', false)" class="btn btn-led">CH1 OFF</button>
+                </div>
+                <div>
+                    <button onclick="setLed('L2', true)" class="btn btn-led">CH2 ON</button>
+                    <button onclick="setLed('L2', false)" class="btn btn-led">CH2 OFF</button>
+                </div>
             </div>
         </div>
 
         <div class="card">
             <h3>Chambre 1</h3>
             <div class="data-box"><span>Personnes</span><span class="value" id="p1">--</span></div>
-            <div class="data-box"><span>Lumi&egrave;re</span><span class="value"><span id="l1">--</span> lx</span></div>
+            <div class="data-box"><span>Luminosit&eacute;</span><span class="value"><span id="l1">--</span> lx</span></div>
+            <div class="data-box"><span>Temp&eacute;rature</span><span class="value"><span id="t1">--</span>°C</span></div>
         </div>
 
         <div class="card">
             <h3>Chambre 2</h3>
             <div class="data-box"><span>Personnes</span><span class="value" id="p2">--</span></div>
-            <div class="data-box"><span>Lumi&egrave;re</span><span class="value"><span id="l2">--</span> lx</span></div>
+            <div class="data-box"><span>Luminosit&eacute;</span><span class="value"><span id="l2">--</span> lx</span></div>
+            <div class="data-box"><span>Temp&eacute;rature</span><span class="value"><span id="t2">--</span>°C</span></div>
         </div>
 
         <div class="card" style="width: 100%; max-width: 930px;">
-            <h3>⚡ &Eacute;nergie : <span id="pow">--</span> W</h3>
+            <h3>⚡ Consommation : <span id="pow">--</span> W (<span id="cur">--</span> mA)</h3>
         </div>
     </div>
 
     <script>
+        // CONFIG FIREBASE
         const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref("maison");
@@ -95,28 +108,37 @@
             window.speechSynthesis.speak(msg);
         }
 
-        // Actions Firebase
+        // Actions
         function toggleMode() { db.child("status").once('value').then(s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
         function toggleSecurity() { db.child("status").once('value').then(s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
         function setLed(led, state) { db.child("status").update({ [led]: state }); }
+
+        // Enregistrement Service Worker pour PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered"));
+        }
 
         // Réception et Alertes
         db.on("value", (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
 
+            // Mise à jour interface
             document.getElementById("p1").innerText = data.chambre1.pers;
             document.getElementById("p2").innerText = data.chambre2.pers;
             document.getElementById("l1").innerText = data.chambre1.lux;
             document.getElementById("l2").innerText = data.chambre2.lux;
+            document.getElementById("t1").innerText = data.chambre1.temp;
+            document.getElementById("t2").innerText = data.chambre2.temp;
             document.getElementById("pow").innerText = data.energie.puissance;
+            document.getElementById("cur").innerText = data.energie.courant;
 
             const isSecu = data.status.modeSecu;
-            const totalPers = data.chambre1.pers + data.chambre2.pers;
+            const totalPers = (data.chambre1.pers || 0) + (data.chambre2.pers || 0);
             const banner = document.getElementById("banner");
             const btnSecu = document.getElementById("btnSecu");
 
-            // Gestion de l'affichage Manuel/Auto
+            // Mode Manuel
             const btnMode = document.getElementById("btnMode");
             if(data.status.modeManuel) {
                 btnMode.innerText = "MANUEL"; btnMode.style.backgroundColor = "var(--orange)";
@@ -126,22 +148,20 @@
                 document.querySelectorAll(".btn-led").forEach(b => b.disabled = true);
             }
 
-            // GESTION SÉCURITÉ ET ALERTE VOCALE
+            // Alerte Sécurité
             if (isSecu) {
                 btnSecu.innerText = "SÉCURITÉ ACTIVÉE"; btnSecu.classList.add("active");
                 banner.innerText = "🛡️ SURVEILLANCE ACTIVE";
-                
+                banner.style.borderLeftColor = "var(--red)";
+
                 if (totalPers > 0) {
                     banner.innerText = "🚨 ALERTE : INTRUSION DÉTECTÉE !";
                     banner.classList.add("intrusion-mode");
-                    
-                    // Vibration
                     if (window.navigator.vibrate) window.navigator.vibrate([500, 200, 500]);
                     
-                    // Alerte Vocale (toutes les 5 secondes max pour ne pas saturer)
                     const maintenant = Date.now();
-                    if (maintenant - lastIntrusionTime > 5000) {
-                        parler("Attention. Une intrusion a été détectée dans votre domicile.");
+                    if (maintenant - lastIntrusionTime > 7000) {
+                        parler("Attention. Mouvement suspect détecté.");
                         lastIntrusionTime = maintenant;
                     }
                 } else {
@@ -149,12 +169,11 @@
                 }
             } else {
                 btnSecu.innerText = "ACTIVER LA SURVEILLANCE"; btnSecu.classList.remove("active");
-                banner.innerText = "✅ SYSTÈME EN ORDRE"; banner.classList.remove("intrusion-mode");
+                banner.innerText = "✅ SYSTÈME EN ORDRE"; 
+                banner.classList.remove("intrusion-mode");
+                banner.style.borderLeftColor = "var(--green)";
             }
         });
     </script>
 </body>
 </html>
-
-
-
