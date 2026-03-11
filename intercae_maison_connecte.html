@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Smart Home IUT</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --green: #2ecc71;
+            --blue: #3498db;
+            --yellow: #f1c40f;
+            --text: #2d3436;
+        }
+
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            color: var(--text);
+            margin: 0; padding: 20px; min-height: 100vh;
+        }
+
+        h1 { font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); color: #2c3e50; }
+
+        .status-bar {
+            background: white; padding: 10px 20px; border-radius: 50px;
+            display: inline-block; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            font-weight: bold; color: var(--green);
+        }
+
+        .container { 
+            display: flex; flex-wrap: wrap; justify-content: center; 
+            gap: 25px; max-width: 1100px; margin: 0 auto; 
+        }
+        
+        .card { 
+            background: var(--card-bg); border-radius: 20px; padding: 25px; 
+            width: 280px; box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease; border: none;
+        }
+
+        .card:hover { transform: translateY(-10px); }
+
+        .card-h1 { border-bottom: 4px solid var(--green); }
+        .card-h2 { border-bottom: 4px solid var(--blue); }
+        .card-nrj { border-bottom: 4px solid var(--yellow); width: 100%; max-width: 615px; }
+
+        h3 { margin-top: 0; font-size: 1.2em; color: #636e72; letter-spacing: 1px; }
+
+        .data-box {
+            background: #f8f9fa; margin: 10px 0; padding: 15px;
+            border-radius: 12px; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .label { font-size: 0.9em; color: #7f8c8d; font-weight: 500; }
+        .valeur { font-size: 1.4em; font-weight: 800; color: #2d3436; }
+        .unite { font-size: 0.6em; margin-left: 3px; vertical-align: middle; }
+
+        .danger { background: #ff7675 !important; color: white !important; animation: blink 1s infinite; }
+        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.7;} 100% {opacity: 1;} }
+    </style>
+</head>
+<body>
+
+    <h1>?? Dashboard Eco-Maison</h1>
+    <div class="status-bar" id="etat">Connexion au Cloud...</div>
+
+    <div class="container">
+        <div class="card card-h1">
+            <h3>CHAMBRE 1</h3>
+            <div class="data-box"><span class="label">Temp&eacute;rature</span><span class="valeur"><span id="t1">--</span><span class="unite">&deg;C</span></span></div>
+            <div class="data-box"><span class="label">Humidit&eacute;</span><span class="valeur"><span id="h1">--</span><span class="unite">%</span></span></div>
+            <div class="data-box"><span class="label">Lumi&egrave;re</span><span class="valeur"><span id="l1">--</span><span class="unite">lx</span></span></div>
+            <div class="data-box"><span class="label">Pr&eacute;sence</span><span class="valeur"><span id="p1">--</span><span class="unite">PERS</span></span></div>
+        </div>
+
+        <div class="card card-h2">
+            <h3>CHAMBRE 2</h3>
+            <div class="data-box"><span class="label">Temp&eacute;rature</span><span class="valeur"><span id="t2">--</span><span class="unite">&deg;C</span></span></div>
+            <div class="data-box"><span class="label">Humidit&eacute;</span><span class="valeur"><span id="h2">--</span><span class="unite">%</span></span></div>
+            <div class="data-box"><span class="label">Lumi&egrave;re</span><span class="valeur"><span id="l2">--</span><span class="unite">lx</span></span></div>
+            <div class="data-box"><span class="label">Pr&eacute;sence</span><span class="valeur"><span id="p2">--</span><span class="unite">PERS</span></span></div>
+        </div>
+
+        <div class="card card-nrj">
+            <h3>CONSOMMATION &Eacute;NERG&Eacute;TIQUE</h3>
+            <div style="display: flex; gap: 20px;">
+                <div class="data-box" style="flex: 1;" id="box-pow">
+                    <span class="label">PUISSANCE</span>
+                    <span class="valeur"><span id="pow">--</span><span class="unite">W</span></span>
+                </div>
+                <div class="data-box" style="flex: 1;">
+                    <span class="label">COURANT</span>
+                    <span class="valeur"><span id="cur">--</span><span class="unite">mA</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database().ref("maison");
+
+        db.on("value", (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById("t1").innerText = data.chambre1.temp;
+                document.getElementById("h1").innerText = data.chambre1.hum;
+                document.getElementById("l1").innerText = data.chambre1.lux;
+                document.getElementById("p1").innerText = data.chambre1.pers;
+
+                document.getElementById("t2").innerText = data.chambre2.temp;
+                document.getElementById("h2").innerText = data.chambre2.hum;
+                document.getElementById("l2").innerText = data.chambre2.lux;
+                document.getElementById("p2").innerText = data.chambre2.pers;
+
+                document.getElementById("pow").innerText = data.energie.puissance;
+                document.getElementById("cur").innerText = data.energie.courant;
+
+                // Alerte si conso > 5W
+                if(data.energie.puissance > 5) {
+                    document.getElementById("box-pow").classList.add("danger");
+                } else {
+                    document.getElementById("box-pow").classList.remove("danger");
+                }
+
+                document.getElementById("etat").innerText = "? CLOUD SYNCHRONISÉ";
+            }
+        });
+    </script>
+</body>
+</html>
