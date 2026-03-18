@@ -3,89 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Home Pro</title>
+    <title>Smart Home IUT - Securité</title>
+    
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/553/553376.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#e74c3c">
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
     <style>
-        :root { --red: #ff3b30; --green: #34c759; --gray: #8e8e93; --dark: #1c1c1e; --blue: #007aff; }
-        body { font-family: -apple-system, system-ui, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .app-container { width: 100%; max-width: 500px; } /* Empêche l'étirement sur PC */
-        h1 { font-size: 24px; font-weight: 700; margin-bottom: 20px; color: #1c1c1e; }
-        .card { background: white; border-radius: 18px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .btn { padding: 18px; border-radius: 14px; border: none; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer; transition: 0.3s; }
-        .btn-secu { background: #e5e5ea; color: #3a3a3c; }
-        .btn-secu.active { background: var(--red); color: white; box-shadow: 0 5px 15px rgba(255, 59, 48, 0.3); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .stat { background: #f8f9fa; padding: 15px; border-radius: 15px; text-align: center; }
-        .label { font-size: 12px; color: var(--gray); text-transform: uppercase; font-weight: 600; }
-        .val { display: block; font-size: 24px; font-weight: 800; color: var(--blue); margin-top: 5px; }
-        #callScreen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); color: white; z-index: 9999; flex-direction: column; align-items: center; justify-content: space-around; }
-        .circle-btn { width: 80px; height: 80px; border-radius: 50%; border: none; color: white; font-size: 30px; cursor: pointer; }
+        :root {
+            --bg: #f2f2f7; --card-bg: #ffffff; --green: #2ecc71;
+            --blue: #007aff; --orange: #e67e22; --red: #ff3b30; --text: #1c1c1e;
+        }
+
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        .app-container { width: 100%; max-width: 500px; }
+
+        .banner {
+            background: white; padding: 15px; border-radius: 14px; margin-bottom: 20px;
+            font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 8px solid var(--green);
+            transition: 0.3s;
+        }
+
+        .card { background: var(--card-bg); border-radius: 18px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .card h3 { margin-top: 0; font-size: 18px; }
+
+        .data-box { background: #f8f9fa; margin: 8px 0; padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .value { font-weight: 800; color: var(--blue); font-size: 1.2em; }
+
+        .btn { padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 16px; }
+        .btn-mode { background: var(--green); color: white; width: 120px; }
+        .btn-secu { background: #8e8e93; color: white; width: 100%; }
+        .btn-secu.active { background: var(--red); box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3); }
+        .btn-led { background: white; border: 2px solid var(--blue); color: var(--blue); flex: 1; margin: 5px; }
+        .btn-led:disabled { opacity: 0.2; }
+
+        /* Mode Alerte iPhone Style */
+        #callScreen {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #1c1c1e; color: white; z-index: 9999;
+            flex-direction: column; align-items: center; justify-content: space-around;
+        }
+        .intrusion-mode { background: var(--red) !important; color: white !important; border-left-color: white !important; animation: pulse 0.8s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
+
     <div class="app-container">
-        <h1>🏠 Ma Maison</h1>
+        <h1>🏠 Dashboard Eco-Maison</h1>
+        <div id="banner" class="banner">Initialisation...</div>
+
         <div class="card">
+            <h3>🛡️ Système de Sécurité</h3>
             <button id="btnSecu" class="btn btn-secu" onclick="toggleSecurity()">ACTIVER LA SURVEILLANCE</button>
-            <p id="audioWarning" style="font-size: 11px; color: var(--gray); margin-top: 10px; text-align: center;">ℹ️ Touchez pour autoriser le son</p>
+            <p id="audioWarning" style="font-size: 10px; color: #8e8e93; margin-top: 10px; text-align: center;">ℹ️ Cliquez pour autoriser l'alerte sonore</p>
         </div>
+
         <div class="card">
-            <h3 style="margin-top:0; font-size: 18px;">Données Capteurs</h3>
-            <div class="grid">
-                <div class="stat"><span class="label">Pers. CH1</span><span class="val" id="p1">--</span></div>
-                <div class="stat"><span class="label">Pers. CH2</span><span class="val" id="p2">--</span></div>
-                <div class="stat"><span class="label">Luminosité</span><span class="val"><span id="l1">--</span><small style="font-size:12px"> lx</small></span></div>
-                <div class="stat"><span class="label">Énergie</span><span class="val"><span id="pow">--</span><small style="font-size:12px"> W</small></span></div>
+            <h3>🎮 Contrôle Manuel</h3>
+            <div class="data-box">
+                <span>Mode de gestion :</span>
+                <button id="btnMode" class="btn btn-mode" onclick="toggleMode()">AUTO</button>
+            </div>
+            <div style="display: flex;">
+                <button onclick="setLed('L1', true)" class="btn btn-led">CH1 ON</button>
+                <button onclick="setLed('L1', false)" class="btn btn-led">CH1 OFF</button>
             </div>
         </div>
-    </div>
-    <div id="callScreen">
-        <div style="text-align:center;">
-            <p style="color: var(--gray);">ALERTE SÉCURITÉ</p>
-            <h1 style="color:white; font-size: 40px;">INTRUSION !</h1>
-        </div>
-        <div style="display:flex; gap:50px;">
-            <button class="circle-btn" style="background:var(--red); transform:rotate(135deg);" onclick="stopAlerte()">📞</button>
-            <button class="circle-btn" style="background:var(--green);" onclick="stopAlerte()">📞</button>
+
+        <div class="card">
+            <h3>Chambre 1 & 2</h3>
+            <div class="data-box"><span>Pers. CH1</span><span class="value" id="p1">--</span></div>
+            <div class="data-box"><span>Pers. CH2</span><span class="value" id="p2">--</span></div>
+            <div class="data-box"><span>Luminosité</span><span class="value"><span id="l1">--</span> lx</span></div>
+            <div class="data-box"><span>Consommation</span><span class="value"><span id="pow">--</span> W</span></div>
         </div>
     </div>
 
+    <div id="callScreen">
+        <div style="text-align:center;">
+            <p style="color: #8e8e93; letter-spacing: 2px;">ALERTE SÉCURITÉ</p>
+            <h1 style="font-size: 40px;">INTRUSION !</h1>
+        </div>
+        <button onclick="stopAlerte()" style="width: 80px; height: 80px; background: var(--red); border-radius: 50%; border: none; color: white; font-size: 30px; transform: rotate(135deg);">📞</button>
+    </div>
+
     <script>
-        // Ta config Firebase ici (garde celle que tu avais)
         const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref("maison");
 
-        let alerteEnCours = false;
-        function parler(m){ window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(m); u.lang='fr-FR'; window.speechSynthesis.speak(u); }
-        function toggleSecurity(){ db.child("status").once('value').then(s => { db.child("status").update({ modeSecu: !s.val().modeSecu }); }); }
-        function stopAlerte(){ alerteEnCours=false; document.getElementById("callScreen").style.display="none"; window.speechSynthesis.cancel(); }
+        let lastIntrusionTime = 0;
+        let alerteActive = false;
+
+        function parler(message) {
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(message);
+            msg.lang = 'fr-FR';
+            window.speechSynthesis.speak(msg);
+        }
+
+        function toggleMode() { db.child("status").once('value').then(s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
+        function toggleSecurity() { 
+            document.getElementById("audioWarning").innerText = "Système Audio Prêt ✅";
+            db.child("status").once('value').then(s => db.child("status").update({ modeSecu: !s.val().modeSecu })); 
+        }
+        function setLed(led, state) { db.child("status").update({ [led]: state }); }
+        
+        function stopAlerte() {
+            alerteActive = false;
+            document.getElementById("callScreen").style.display = "none";
+            window.speechSynthesis.cancel();
+        }
 
         db.on("value", (snapshot) => {
             const data = snapshot.val();
-            if(!data) return;
+            if (!data) return;
+
+            // Update UI
             document.getElementById("p1").innerText = data.chambre1.pers;
             document.getElementById("p2").innerText = data.chambre2.pers;
             document.getElementById("l1").innerText = data.chambre1.lux;
-            document.getElementById("pow").innerText = Math.abs(data.energie.puissance).toFixed(2);
+            document.getElementById("pow").innerText = Math.abs(data.energie.puissance).toFixed(1);
 
             const isSecu = data.status.modeSecu;
-            const btn = document.getElementById("btnSecu");
-            if(isSecu){
-                btn.innerText = "SURVEILLANCE ACTIVE"; btn.classList.add("active");
-                if((data.chambre1.pers + data.chambre2.pers) > 0 && !alerteEnCours){
-                    alerteEnCours = true; document.getElementById("callScreen").style.display="flex";
-                    parler("Intrusion détectée !");
+            const totalPers = (data.chambre1.pers || 0) + (data.chambre2.pers || 0);
+            const banner = document.getElementById("banner");
+            const btnSecu = document.getElementById("btnSecu");
+
+            // Mode Manuel/Auto
+            const btnMode = document.getElementById("btnMode");
+            if(data.status.modeManuel) {
+                btnMode.innerText = "MANUEL"; btnMode.style.backgroundColor = "var(--orange)";
+                document.querySelectorAll(".btn-led").forEach(b => b.disabled = false);
+            } else {
+                btnMode.innerText = "AUTO"; btnMode.style.backgroundColor = "var(--green)";
+                document.querySelectorAll(".btn-led").forEach(b => b.disabled = true);
+            }
+
+            // Sécurité et Alerte
+            if (isSecu) {
+                btnSecu.innerText = "SÉCURITÉ ACTIVÉE"; btnSecu.classList.add("active");
+                banner.innerText = "🛡️ SURVEILLANCE ACTIVE";
+                banner.style.borderLeftColor = "var(--red)";
+
+                if (totalPers > 0) {
+                    banner.innerText = "🚨 ALERTE : INTRUSION !";
+                    banner.classList.add("intrusion-mode");
+                    document.getElementById("callScreen").style.display = "flex";
+                    
+                    if (window.navigator.vibrate) window.navigator.vibrate([500, 200, 500]);
+
+                    const maintenant = Date.now();
+                    if (maintenant - lastIntrusionTime > 5000) {
+                        parler("Attention. Une présence suspecte a été détectée.");
+                        lastIntrusionTime = maintenant;
+                    }
                 }
             } else {
-                btn.innerText = "ACTIVER LA SURVEILLANCE"; btn.classList.remove("active");
+                btnSecu.innerText = "ACTIVER LA SURVEILLANCE"; btnSecu.classList.remove("active");
+                banner.innerText = "✅ SYSTÈME EN ORDRE"; 
+                banner.classList.remove("intrusion-mode");
+                banner.style.borderLeftColor = "var(--green)";
                 stopAlerte();
             }
         });
+
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     </script>
 </body>
