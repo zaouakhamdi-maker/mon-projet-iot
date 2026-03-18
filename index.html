@@ -2,96 +2,164 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Home IUT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Home V3.0 - TEST</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    
+
     <style>
-        body { font-family: sans-serif; background: #f0f0f5; padding: 20px; text-align: center; }
-        .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        :root { --red: #ff3b30; --blue: #007aff; --bg: #f2f2f7; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 0; }
         
-        /* BOUTONS DE TEST BIEN VISIBLES */
-        .test-btn-container { display: flex; gap: 10px; margin-bottom: 20px; }
-        .t-btn { flex: 1; padding: 20px; border: none; border-radius: 10px; font-weight: bold; color: white; cursor: pointer; }
-        .t-vibre { background: #5856d6; }
-        .t-audio { background: #af52de; }
+        /* ZONE DE TEST CRITIQUE - DOIT APPARAITRE EN PREMIER */
+        .debug-bar { 
+            background: #000; 
+            padding: 15px; 
+            display: flex; 
+            gap: 10px; 
+            position: sticky; 
+            top: 0; 
+            z-index: 9999;
+            border-bottom: 3px solid var(--blue);
+        }
+        .btn-test { 
+            flex: 1; 
+            padding: 15px; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            color: white; 
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .vibrer { background: var(--red); }
+        .parler { background: var(--blue); }
+
+        /* DASHBOARD */
+        .container { padding: 15px; max-width: 500px; margin: 0 auto; }
+        .status-banner { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 12px; 
+            margin-bottom: 15px; 
+            text-align: center; 
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .card { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 15px; 
+            margin-bottom: 15px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .data-box { background: #f8f9fa; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #eee; }
+        .label { font-size: 11px; color: #888; text-transform: uppercase; display: block; }
+        .value { font-size: 1.4em; font-weight: bold; color: var(--blue); }
         
-        /* RESTE DU DESIGN */
-        .banner { background: #34c759; color: white; padding: 15px; border-radius: 10px; font-weight: bold; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .box { background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
-        .value { display: block; font-size: 1.2em; font-weight: bold; color: #007aff; }
-        .btn-main { width: 100%; padding: 15px; margin-top: 10px; border-radius: 10px; border: none; font-weight: bold; color: white; }
+        .intrusion-active { background: var(--red) !important; color: white !important; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div class="test-btn-container">
-        <button class="t-btn t-vibre" onclick="testerVibrer()">TEST VIBREUR</button>
-        <button class="t-btn t-audio" onclick="testerAudio()">TEST AUDIO</button>
+    <div class="debug-bar">
+        <button class="btn-test vibrer" onclick="testerVibrer()">📳 VIBRER</button>
+        <button class="btn-test parler" onclick="testerParler()">🔊 PARLER</button>
     </div>
 
-    <div id="banner" class="banner">Système Connecté</div>
+    <div class="container">
+        <div id="banner" class="status-banner">✅ SYSTÈME CONNECTÉ</div>
 
-    <div class="card">
-        <h3>🏠 Chambre 1</h3>
-        <div class="grid">
-            <div class="box">Temp <span class="value" id="t1">--</span></div>
-            <div class="box">Hum <span class="value" id="h1">--</span></div>
-            <div class="box">Lum <span class="value" id="l1">--</span></div>
-            <div class="box">Pers <span class="value" id="p1">--</span></div>
+        <div class="card">
+            <h3 style="margin-top:0">🛏️ Chambre 1</h3>
+            <div class="grid">
+                <div class="data-box"><span class="label">Temp</span><span class="value" id="t1">--</span>°C</div>
+                <div class="data-box"><span class="label">Hum</span><span class="value" id="h1">--</span>%</div>
+                <div class="data-box"><span class="label">Lux</span><span class="value" id="l1">--</span> lx</div>
+                <div class="data-box"><span class="label">Pers</span><span class="value" id="p1">--</span></div>
+            </div>
         </div>
-    </div>
 
-    <div class="card">
-        <h3>🏠 Chambre 2</h3>
-        <div class="grid">
-            <div class="box">Temp <span class="value" id="t2">--</span></div>
-            <div class="box">Hum <span class="value" id="h2">--</span></div>
-            <div class="box">Lum <span class="value" id="l2">--</span></div>
-            <div class="box">Pers <span class="value" id="p2">--</span></div>
+        <div class="card">
+            <h3 style="margin-top:0">🛌 Chambre 2</h3>
+            <div class="grid">
+                <div class="data-box"><span class="label">Temp</span><span class="value" id="t2">--</span>°C</div>
+                <div class="data-box"><span class="label">Hum</span><span class="value" id="h2">--</span>%</div>
+                <div class="data-box"><span class="label">Lux</span><span class="value" id="l2">--</span> lx</div>
+                <div class="data-box"><span class="label">Pers</span><span class="value" id="p2">--</span></div>
+            </div>
         </div>
     </div>
 
     <script>
+        // CONFIGURATION FIREBASE
         const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref("maison");
 
+        let lastAlert = 0;
+
         // --- FONCTIONS DE TEST ---
         function testerVibrer() {
-            console.log("Test Vibreur...");
-            if (window.navigator.vibrate) {
-                window.navigator.vibrate([500, 200, 500]);
+            if (navigator.vibrate) {
+                navigator.vibrate([500, 200, 500]);
             } else {
-                alert("Vibration non supportée");
+                alert("Vibration non supportée sur ce tel");
             }
         }
 
-        function testerAudio() {
-            console.log("Test Audio...");
+        function testerParler() {
             window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance("Test du haut-parleur réussi");
-            u.lang = 'fr-FR';
-            window.speechSynthesis.speak(u);
+            const msg = new SpeechSynthesisUtterance("Test du son réussi");
+            msg.lang = 'fr-FR';
+            window.speechSynthesis.speak(msg);
         }
 
         // --- LECTURE FIREBASE ---
-        db.on("value", (s) => {
-            const d = s.val();
-            if (!d) return;
-            document.getElementById("t1").innerText = d.chambre1.temp + "°C";
-            document.getElementById("h1").innerText = d.chambre1.hum + "%";
-            document.getElementById("l1").innerText = d.chambre1.lux + " lx";
-            document.getElementById("p1").innerText = d.chambre1.pers;
+        db.on("value", (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            // Mise à jour interface
+            document.getElementById("t1").innerText = data.chambre1.temp;
+            document.getElementById("h1").innerText = data.chambre1.hum;
+            document.getElementById("l1").innerText = data.chambre1.lux;
+            document.getElementById("p1").innerText = data.chambre1.pers;
             
-            document.getElementById("t2").innerText = d.chambre2.temp + "°C";
-            document.getElementById("h2").innerText = d.chambre2.hum + "%";
-            document.getElementById("l2").innerText = d.chambre2.lux + " lx";
-            document.getElementById("p2").innerText = d.chambre2.pers;
+            document.getElementById("t2").innerText = data.chambre2.temp;
+            document.getElementById("h2").innerText = data.chambre2.hum;
+            document.getElementById("l2").innerText = data.chambre2.lux;
+            document.getElementById("p2").innerText = data.chambre2.pers;
+
+            // Logique intrusion automatique
+            const totalPers = (data.chambre1.pers || 0) + (data.chambre2.pers || 0);
+            const banner = document.getElementById("banner");
+
+            if (data.status.modeSecu && totalPers > 0) {
+                banner.innerText = "🚨 INTRUSION DÉTECTÉE !";
+                banner.classList.add("intrusion-active");
+                
+                // Vibreur auto
+                if (navigator.vibrate) navigator.vibrate(500);
+                
+                // Son auto (toutes les 8s)
+                if (Date.now() - lastAlert > 8000) {
+                    testerParler(); // On réutilise la fonction de test
+                    lastAlert = Date.now();
+                }
+            } else {
+                banner.innerText = "✅ SYSTÈME SÉCURISÉ";
+                banner.classList.remove("intrusion-active");
+            }
         });
+
+        // Enregistrement Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
     </script>
 </body>
 </html>
