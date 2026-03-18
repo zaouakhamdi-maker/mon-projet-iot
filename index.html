@@ -3,169 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Home IUT</title>
-    
+    <title>Smart Home Pro</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ff3b30">
-    
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/553/553376.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    
     <style>
         :root { --red: #ff3b30; --green: #34c759; --gray: #8e8e93; --dark: #1c1c1e; --blue: #007aff; }
-        
-        body { 
-            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: #f2f2f7; margin: 0; padding: 20px; text-align: center; color: #000;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        
-        .btn { padding: 18px; border-radius: 12px; border: none; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer; transition: 0.2s; }
-        .btn-secu { background: var(--gray); color: white; }
-        .btn-secu.active { background: var(--red); box-shadow: 0 0 15px rgba(255, 59, 48, 0.4); }
-
-        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .stat-item { background: #f8f8f8; padding: 10px; border-radius: 10px; border: 1px solid #eee; }
-        .val { display: block; font-size: 22px; font-weight: bold; color: var(--blue); margin-top: 5px; }
-
-        /* ÉCRAN D'APPEL (SIMULATION UNIVERSELLE) */
-        #callScreen {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--dark); color: white; z-index: 99999;
-            flex-direction: column; align-items: center; justify-content: space-around;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .call-actions { display: flex; gap: 60px; }
-        .circle-btn { width: 80px; height: 80px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 35px; color: white; cursor: pointer; }
-        .decline { background: var(--red); transform: rotate(135deg); }
-        .accept { background: var(--green); }
-
-        .pulse-text { animation: pulse 1.5s infinite; color: var(--red); font-weight: bold; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        body { font-family: -apple-system, system-ui, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .app-container { width: 100%; max-width: 500px; } /* Empêche l'étirement sur PC */
+        h1 { font-size: 24px; font-weight: 700; margin-bottom: 20px; color: #1c1c1e; }
+        .card { background: white; border-radius: 18px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .btn { padding: 18px; border-radius: 14px; border: none; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        .btn-secu { background: #e5e5ea; color: #3a3a3c; }
+        .btn-secu.active { background: var(--red); color: white; box-shadow: 0 5px 15px rgba(255, 59, 48, 0.3); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .stat { background: #f8f9fa; padding: 15px; border-radius: 15px; text-align: center; }
+        .label { font-size: 12px; color: var(--gray); text-transform: uppercase; font-weight: 600; }
+        .val { display: block; font-size: 24px; font-weight: 800; color: var(--blue); margin-top: 5px; }
+        #callScreen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); color: white; z-index: 9999; flex-direction: column; align-items: center; justify-content: space-around; }
+        .circle-btn { width: 80px; height: 80px; border-radius: 50%; border: none; color: white; font-size: 30px; cursor: pointer; }
     </style>
 </head>
 <body>
-
-    <h2 style="margin-top:30px;">🏠 Dashboard Eco-Maison</h2>
-    
-    <div class="card">
-        <button id="btnSecu" class="btn btn-secu" onclick="toggleSecurity()">ACTIVER LA SURVEILLANCE</button>
-        <p id="audioWarning" style="font-size: 11px; color: var(--gray); margin-top: 10px;">⚠️ Touchez pour autoriser les alertes sonores</p>
-    </div>
-
-    <div class="card">
-        <h3 style="margin-top:0;">Donn&eacute;es Temps R&eacute;el</h3>
-        <div class="status-grid">
-            <div class="stat-item">Pers. CH1 <span class="val" id="p1">--</span></div>
-            <div class="stat-item">Pers. CH2 <span class="val" id="p2">--</span></div>
-            <div class="stat-item">Luminosit&eacute; <span class="val"><span id="l1">--</span> lx</span></div>
-            <div class="stat-item">&Eacute;nergie <span class="val"><span id="pow">--</span> W</span></div>
+    <div class="app-container">
+        <h1>🏠 Ma Maison</h1>
+        <div class="card">
+            <button id="btnSecu" class="btn btn-secu" onclick="toggleSecurity()">ACTIVER LA SURVEILLANCE</button>
+            <p id="audioWarning" style="font-size: 11px; color: var(--gray); margin-top: 10px; text-align: center;">ℹ️ Touchez pour autoriser le son</p>
+        </div>
+        <div class="card">
+            <h3 style="margin-top:0; font-size: 18px;">Données Capteurs</h3>
+            <div class="grid">
+                <div class="stat"><span class="label">Pers. CH1</span><span class="val" id="p1">--</span></div>
+                <div class="stat"><span class="label">Pers. CH2</span><span class="val" id="p2">--</span></div>
+                <div class="stat"><span class="label">Luminosité</span><span class="val"><span id="l1">--</span><small style="font-size:12px"> lx</small></span></div>
+                <div class="stat"><span class="label">Énergie</span><span class="val"><span id="pow">--</span><small style="font-size:12px"> W</small></span></div>
+            </div>
         </div>
     </div>
-
     <div id="callScreen">
         <div style="text-align:center;">
-            <p style="letter-spacing: 3px; font-size: 14px; color: var(--gray); margin-bottom: 20px;">APPEL DE S&Eacute;CURIT&Eacute;</p>
-            <h1 style="font-size: 38px; margin: 0;">INTRUSION !</h1>
-            <p id="locText" class="pulse-text" style="margin-top: 15px;">D&eacute;tection en cours...</p>
+            <p style="color: var(--gray);">ALERTE SÉCURITÉ</p>
+            <h1 style="color:white; font-size: 40px;">INTRUSION !</h1>
         </div>
-        
-        <div class="call-actions">
-            <div style="text-align:center;">
-                <button class="circle-btn decline" onclick="stopAlerte()">📞</button>
-                <p style="font-size:12px; margin-top:10px;">Refuser</p>
-            </div>
-            <div style="text-align:center;">
-                <button class="circle-btn accept" onclick="stopAlerte()">📞</button>
-                <p style="font-size:12px; margin-top:10px;">R&eacute;pondre</p>
-            </div>
+        <div style="display:flex; gap:50px;">
+            <button class="circle-btn" style="background:var(--red); transform:rotate(135deg);" onclick="stopAlerte()">📞</button>
+            <button class="circle-btn" style="background:var(--green);" onclick="stopAlerte()">📞</button>
         </div>
     </div>
 
     <script>
+        // Ta config Firebase ici (garde celle que tu avais)
         const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref("maison");
 
-        let lastIntrusionTime = 0;
         let alerteEnCours = false;
+        function parler(m){ window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(m); u.lang='fr-FR'; window.speechSynthesis.speak(u); }
+        function toggleSecurity(){ db.child("status").once('value').then(s => { db.child("status").update({ modeSecu: !s.val().modeSecu }); }); }
+        function stopAlerte(){ alerteEnCours=false; document.getElementById("callScreen").style.display="none"; window.speechSynthesis.cancel(); }
 
-        // Fonction vocale optimisée
-        function parler(msg) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(msg);
-            utterance.lang = 'fr-FR';
-            utterance.pitch = 1.0;
-            utterance.rate = 0.9;
-            window.speechSynthesis.speak(utterance);
-        }
-
-        // Bascule de la sécurité
-        function toggleSecurity() {
-            document.getElementById("audioWarning").innerText = "Système Audio Prêt ✅";
-            db.child("status").once('value').then(s => {
-                db.child("status").update({ modeSecu: !s.val().modeSecu });
-            });
-        }
-
-        // Arrêt manuel de l'alerte
-        function stopAlerte() {
-            alerteEnCours = false;
-            document.getElementById("callScreen").style.display = "none";
-            window.speechSynthesis.cancel();
-            if (window.navigator.vibrate) window.navigator.vibrate(0);
-        }
-
-        // Écoute des données Firebase
         db.on("value", (snapshot) => {
             const data = snapshot.val();
-            if (!data) return;
-
-            // Mise à jour de l'affichage
+            if(!data) return;
             document.getElementById("p1").innerText = data.chambre1.pers;
             document.getElementById("p2").innerText = data.chambre2.pers;
             document.getElementById("l1").innerText = data.chambre1.lux;
-            document.getElementById("pow").innerText = data.energie.puissance;
+            document.getElementById("pow").innerText = Math.abs(data.energie.puissance).toFixed(2);
 
             const isSecu = data.status.modeSecu;
-            const totalPers = (data.chambre1.pers || 0) + (data.chambre2.pers || 0);
-
-            if (isSecu) {
-                document.getElementById("btnSecu").innerText = "SURVEILLANCE ACTIVE";
-                document.getElementById("btnSecu").classList.add("active");
-
-                // Déclenchement de l'appel
-                if (totalPers > 0 && !alerteEnCours) {
-                    alerteEnCours = true;
-                    document.getElementById("callScreen").style.display = "flex";
-                    document.getElementById("locText").innerText = "D&eacute;tection : " + totalPers + " personne(s)";
-                    
-                    parler("Alerte de sécurité. Une présence suspecte a été détectée dans votre domicile.");
-                    
-                    if (window.navigator.vibrate) {
-                        window.navigator.vibrate([1000, 500, 1000, 500, 1000]);
-                    }
+            const btn = document.getElementById("btnSecu");
+            if(isSecu){
+                btn.innerText = "SURVEILLANCE ACTIVE"; btn.classList.add("active");
+                if((data.chambre1.pers + data.chambre2.pers) > 0 && !alerteEnCours){
+                    alerteEnCours = true; document.getElementById("callScreen").style.display="flex";
+                    parler("Intrusion détectée !");
                 }
             } else {
-                document.getElementById("btnSecu").innerText = "ACTIVER LA SURVEILLANCE";
-                document.getElementById("btnSecu").classList.remove("active");
+                btn.innerText = "ACTIVER LA SURVEILLANCE"; btn.classList.remove("active");
                 stopAlerte();
             }
         });
-
-        // Enregistrement PWA pour installation
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
-        }
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     </script>
 </body>
 </html>
