@@ -16,29 +16,29 @@
         :root { --bg: #f2f2f7; --card-bg: #ffffff; --green: #34c759; --blue: #007aff; --orange: #ff9500; --red: #ff3b30; --text: #1c1c1e; }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; text-align: center; }
         .app-wrapper { max-width: 500px; margin: 0 auto; }
-        .banner { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 10px solid var(--green); transition: 0.3s; }
+        .banner { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 10px solid var(--green); }
         .card { background: var(--card-bg); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid var(--blue); }
-        .card-secu { border-top-color: var(--red); }
-        .card-ctrl { border-top-color: var(--orange); }
         .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
-        .data-box { background: #f8f9fa; padding: 8px; border-radius: 10px; display: flex; flex-direction: column; }
-        .label { font-size: 10px; color: #8e8e93; text-transform: uppercase; }
+        .data-box { background: #f8f9fa; padding: 8px; border-radius: 10px; }
+        .label { font-size: 10px; color: #8e8e93; text-transform: uppercase; display: block; }
         .value { font-weight: bold; color: var(--blue); font-size: 1.1em; }
-        .btn { padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px; }
-        .btn-mode { background: var(--green); color: white; width: 100%; margin-bottom: 10px; }
-        .btn-secu { background: #8e8e93; color: white; width: 100%; }
+        .btn { padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; margin-bottom: 10px; }
+        .btn-mode { background: var(--green); color: white; }
+        .btn-secu { background: #8e8e93; color: white; }
         .btn-secu.active { background: var(--red); box-shadow: 0 0 15px rgba(255, 59, 48, 0.3); }
         .btn-led { background: white; border: 2px solid var(--blue); color: var(--blue); flex: 1; margin: 5px; font-size: 12px; }
-        .btn-led:disabled { opacity: 0.2; cursor: not-allowed; }
+        .btn-led:disabled { opacity: 0.2; }
         .intrusion-mode { background: var(--red) !important; color: white !important; animation: pulse 0.8s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
     <div class="app-wrapper">
+        <button onclick="testerAlertes()" style="background:#000; color:#fff; font-size:10px; padding:5px; margin-bottom:10px; border-radius:5px;">TESTER SON/VIBREUR</button>
+
         <div id="banner" class="banner">Initialisation...</div>
 
-        <div class="card card-secu">
+        <div class="card" style="border-top-color: var(--orange);">
             <button id="btnMode" class="btn btn-mode" onclick="toggleMode()">MODE : AUTO</button>
             <button id="btnSecu" class="btn btn-secu" onclick="toggleSecurity()">ACTIVER LA SURVEILLANCE</button>
         </div>
@@ -46,10 +46,10 @@
         <div class="card">
             <h3>🛏️ Chambre 1</h3>
             <div class="data-grid">
-                <div class="data-box"><span class="label">Temp</span><span class="value"><span id="t1">--</span>°C</span></div>
-                <div class="data-box"><span class="label">Humidité</span><span class="value"><span id="h1">--</span>%</span></div>
-                <div class="data-box"><span class="label">Lumière</span><span class="value"><span id="l1">--</span> lx</span></div>
-                <div class="data-box"><span class="label">Présence</span><span class="value" id="p1">--</span></div>
+                <div class="data-box"><span class="label">Temp</span><span class="value" id="t1">--</span>°C</div>
+                <div class="data-box"><span class="label">Hum</span><span class="value" id="h1">--</span>%</div>
+                <div class="data-box"><span class="label">Lux</span><span class="value" id="l1">--</span> lx</div>
+                <div class="data-box"><span class="label">Pers</span><span class="value" id="p1">--</span></div>
             </div>
             <div style="display: flex;">
                 <button onclick="setLed('L1', true)" class="btn btn-led ctrl-btn">CH1 ON</button>
@@ -60,10 +60,10 @@
         <div class="card">
             <h3>🛌 Chambre 2</h3>
             <div class="data-grid">
-                <div class="data-box"><span class="label">Temp</span><span class="value"><span id="t2">--</span>°C</span></div>
-                <div class="data-box"><span class="label">Humidité</span><span class="value"><span id="h2">--</span>%</span></div>
-                <div class="data-box"><span class="label">Lumière</span><span class="value"><span id="l2">--</span> lx</span></div>
-                <div class="data-box"><span class="label">Présence</span><span class="value" id="p2">--</span></div>
+                <div class="data-box"><span class="label">Temp</span><span class="value" id="t2">--</span>°C</div>
+                <div class="data-box"><span class="label">Hum</span><span class="value" id="h2">--</span>%</div>
+                <div class="data-box"><span class="label">Lux</span><span class="value" id="l2">--</span> lx</div>
+                <div class="data-box"><span class="label">Pers</span><span class="value" id="p2">--</span></div>
             </div>
             <div style="display: flex;">
                 <button onclick="setLed('L2', true)" class="btn btn-led ctrl-btn">CH2 ON</button>
@@ -71,8 +71,8 @@
             </div>
         </div>
 
-        <div class="card">
-            <h3>⚡ Énergie : <span id="pow" class="value">--</span> W</h3>
+        <div class="card" style="background:#1c1c1e; color:white;">
+            <h3>⚡ Énergie : <span id="pow" style="color:var(--green)">--</span> W</h3>
         </div>
     </div>
 
@@ -83,6 +83,13 @@
         let lastIntrusionTime = 0;
 
         function parler(msg) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(msg); u.lang='fr-FR'; window.speechSynthesis.speak(u); }
+        
+        function testerAlertes() {
+            if (window.navigator.vibrate) window.navigator.vibrate([200, 100, 200]);
+            parler("Test du système audio réussi.");
+            alert("Si vous entendez la voix et sentez la vibration, c'est que votre navigateur autorise les alertes.");
+        }
+
         function toggleMode() { db.child("status").once('value').then(s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
         function toggleSecurity() { db.child("status").once('value').then(s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
         function setLed(led, state) { db.child("status").update({ [led]: state }); }
@@ -91,27 +98,22 @@
             const data = snapshot.val();
             if (!data) return;
 
-            // Affichage données CH1
             document.getElementById("t1").innerText = data.chambre1.temp;
             document.getElementById("h1").innerText = data.chambre1.hum;
             document.getElementById("l1").innerText = data.chambre1.lux;
             document.getElementById("p1").innerText = data.chambre1.pers;
-
-            // Affichage données CH2
             document.getElementById("t2").innerText = data.chambre2.temp;
             document.getElementById("h2").innerText = data.chambre2.hum;
             document.getElementById("l2").innerText = data.chambre2.lux;
             document.getElementById("p2").innerText = data.chambre2.pers;
             document.getElementById("pow").innerText = data.energie.puissance;
 
-            // Mode Manuel/Auto
             const isManuel = data.status.modeManuel;
             const btnM = document.getElementById("btnMode");
             btnM.innerText = isManuel ? "MODE : MANUEL" : "MODE : AUTO";
             btnM.style.backgroundColor = isManuel ? "var(--orange)" : "var(--green)";
             document.querySelectorAll(".ctrl-btn").forEach(b => b.disabled = !isManuel);
 
-            // Sécurité
             const isSecu = data.status.modeSecu;
             const banner = document.getElementById("banner");
             const btnS = document.getElementById("btnSecu");
@@ -123,10 +125,9 @@
                     banner.innerText = "🚨 INTRUSION DÉTECTÉE !";
                     banner.classList.add("intrusion-mode");
                     if (window.navigator.vibrate) window.navigator.vibrate([500, 200, 500]);
-                    const maintenant = Date.now();
-                    if (maintenant - lastIntrusionTime > 5000) {
-                        parler("Attention. Une intrusion a été détectée.");
-                        lastIntrusionTime = maintenant;
+                    if (Date.now() - lastIntrusionTime > 7000) {
+                        parler("Attention. Une intrusion a été détectée dans votre maison.");
+                        lastIntrusionTime = Date.now();
                     }
                 } else { banner.classList.remove("intrusion-mode"); }
             } else {
