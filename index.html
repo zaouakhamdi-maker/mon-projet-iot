@@ -2,79 +2,79 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Home PWA - Contr&ocirc;le & S&eacute;curit&eacute;</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Home Pro</title>
     
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#e74c3c">
-    
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/553/553376.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
     <style>
-        :root {
-            --bg: #f0f2f5; --card-bg: #ffffff; --green: #2ecc71;
-            --blue: #3498db; --orange: #e67e22; --red: #e74c3c; --text: #2d3436;
+        :root { --red: #ff3b30; --blue: #007aff; --bg: #f2f2f7; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); margin: 0; padding: 20px; text-align: center; -webkit-tap-highlight-color: transparent; }
+        
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: 600; width: 100%; margin: 5px 0; font-size: 16px; cursor: pointer; }
+        .btn-secu { background: #8e8e93; color: white; }
+        .btn-secu.active { background: var(--red); box-shadow: 0 0 15px rgba(255, 59, 48, 0.4); }
+        
+        /* ÉCRAN D'APPEL IPHONE */
+        #callScreen {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #1c1c1e; color: white; z-index: 10000;
+            flex-direction: column; align-items: center; justify-content: space-around;
         }
-        body { font-family: 'Segoe UI', sans-serif; background: #e9ecef; color: var(--text); margin: 0; padding: 20px; text-align: center; }
-        .banner {
-            background: white; padding: 15px; border-radius: 12px; max-width: 800px; margin: 0 auto 20px;
-            font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 10px solid var(--green);
+        .caller-id { text-align: center; margin-top: 50px; }
+        .caller-id h2 { font-size: 32px; margin: 10px 0; }
+        .caller-id p { color: #8e8e93; font-size: 18px; }
+        
+        .accept-btn {
+            width: 80px; height: 80px; background: #34c759; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(52, 199, 89, 0.4); border: none; cursor: pointer;
         }
-        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; max-width: 1000px; margin: 0 auto; }
-        .card { background: var(--card-bg); border-radius: 15px; padding: 20px; width: 300px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-top: 5px solid var(--blue); }
-        .card-secu { border-color: var(--red); width: 100%; max-width: 450px; }
-        .card-ctrl { border-color: var(--orange); width: 100%; max-width: 450px; }
-        .data-box { background: #f8f9fa; margin: 10px 0; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .value { font-weight: bold; color: var(--blue); }
-        .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin: 5px; }
-        .btn-mode { background: var(--green); color: white; min-width: 120px; }
-        .btn-secu { background: #95a5a6; color: white; width: 100%; font-size: 1.1em; }
-        .btn-secu.active { background: var(--red); box-shadow: 0 0 15px rgba(231, 76, 60, 0.4); }
-        .btn-led { background: white; border: 2px solid var(--blue); color: var(--blue); }
-        .btn-led:disabled { opacity: 0.3; }
-        .intrusion-mode { background: var(--red) !important; color: white !important; animation: pulse 0.8s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        .decline-btn {
+            width: 80px; height: 80px; background: var(--red); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(255, 59, 48, 0.4); border: none; cursor: pointer;
+        }
+        .pulse { animation: pulse-red 1.5s infinite; }
+        @keyframes pulse-red { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
-    <h1>🏠 Ma Maison Connect&eacute;e</h1>
-    <div id="banner" class="banner">En attente de connexion...</div>
+    <h2 style="margin-top:40px;">🏠 Dashboard IUT</h2>
+    <div class="card">
+        <button id="btnSecu" class="btn btn-secu" onclick="toggleSecurity()">ACTIVER LA SURVEILLANCE</button>
+        <p id="statusMsg" style="font-size: 12px; color: #8e8e93;">Touchez un bouton pour activer l'audio</p>
+    </div>
 
-    <div class="container">
-        <div class="card card-secu">
-            <h3>🛡️ Bouclier de S&eacute;curit&eacute;</h3>
-            <button id="btnSecu" class="btn btn-secu" onclick="toggleSecurity()">ACTIVER LA SURVEILLANCE</button>
-            <p style="font-size:0.7em; cursor:pointer;" onclick="parler('Test du système audio')">🔈 Tester le son</p>
+    <div class="card">
+        <h3>État des Chambres</h3>
+        <p>CH1: <span id="p1">--</span> pers | CH2: <span id="p2">--</span> pers</p>
+    </div>
+
+    <div id="callScreen">
+        <div class="caller-id">
+            <p>APPEL ENTRANT</p>
+            <h2 class="pulse">ALERTE MAISON</h2>
+            <p>Localisation : Salon</p>
         </div>
-
-        <div class="card card-ctrl">
-            <h3>🎮 Mode Manuel / Auto</h3>
-            <div class="data-box">
-                <span>Mode :</span>
-                <button id="btnMode" class="btn btn-mode" onclick="toggleMode()">AUTO</button>
+        
+        <div style="display:flex; gap:60px;">
+            <div style="text-align:center;">
+                <button class="decline-btn" onclick="stopAlerte()"><span style="font-size:30px; transform: rotate(135deg);">📞</span></button>
+                <p style="margin-top:10px; font-size:12px;">Refuser</p>
             </div>
-            <div style="display: flex; justify-content: space-around;">
-                <button onclick="setLed('L1', true)" class="btn btn-led">L1 ON</button>
-                <button onclick="setLed('L1', false)" class="btn btn-led">L1 OFF</button>
-                <button onclick="setLed('L2', true)" class="btn btn-led">L2 ON</button>
-                <button onclick="setLed('L2', false)" class="btn btn-led">L2 OFF</button>
+            <div style="text-align:center;">
+                <button class="accept-btn" onclick="stopAlerte()"><span style="font-size:30px;">📞</span></button>
+                <p style="margin-top:10px; font-size:12px;">Accepter</p>
             </div>
-        </div>
-
-        <div class="card">
-            <h3>Chambre 1</h3>
-            <div class="data-box"><span>Personnes :</span><span class="value" id="p1">--</span></div>
-            <div class="data-box"><span>Lumi&egrave;re :</span><span class="value"><span id="l1">--</span> lx</span></div>
-            <div class="data-box"><span>Temp. :</span><span class="value"><span id="t1">--</span>°C</span></div>
-        </div>
-
-        <div class="card">
-            <h3>Chambre 2</h3>
-            <div class="data-box"><span>Personnes :</span><span class="value" id="p2">--</span></div>
-            <div class="data-box"><span>Lumi&egrave;re :</span><span class="value"><span id="l2">--</span> lx</span></div>
-            <div class="data-box"><span>Temp. :</span><span class="value"><span id="t2">--</span>°C</span></div>
         </div>
     </div>
 
@@ -84,84 +84,56 @@
         const db = firebase.database().ref("maison");
 
         let lastIntrusionTime = 0;
+        let isAlerteActive = false;
 
-        // --- SYNTHESE VOCALE CORRIGÉE ---
         function parler(message) {
-            window.speechSynthesis.cancel(); // Stoppe tout message en cours
+            window.speechSynthesis.cancel();
             const msg = new SpeechSynthesisUtterance(message);
             msg.lang = 'fr-FR';
-            msg.rate = 0.9; // Un peu plus lent pour être clair
             window.speechSynthesis.speak(msg);
         }
 
-        // Actions Firebase
-        function toggleMode() { db.child("status").once('value').then(s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
-        function toggleSecurity() { db.child("status").once('value').then(s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
-        function setLed(led, state) { db.child("status").update({ [led]: state }); }
+        function toggleSecurity() { 
+            document.getElementById("statusMsg").innerText = "Audio débloqué ✅";
+            db.child("status").once('value').then(s => db.child("status").update({ modeSecu: !s.val().modeSecu })); 
+        }
 
-        // PWA Registration
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+        function stopAlerte() {
+            isAlerteActive = false;
+            document.getElementById("callScreen").style.display = "none";
+            window.speechSynthesis.cancel();
+        }
 
-        // Réception et Logic d'Alerte
         db.on("value", (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
 
             document.getElementById("p1").innerText = data.chambre1.pers;
             document.getElementById("p2").innerText = data.chambre2.pers;
-            document.getElementById("l1").innerText = data.chambre1.lux;
-            document.getElementById("l2").innerText = data.chambre2.lux;
-            document.getElementById("t1").innerText = data.chambre1.temp;
-            document.getElementById("t2").innerText = data.chambre2.temp;
 
             const isSecu = data.status.modeSecu;
-            const totalPers = (data.chambre1.pers || 0) + (data.chambre2.pers || 0);
-            const banner = document.getElementById("banner");
+            const hasIntrusion = (data.chambre1.pers + data.chambre2.pers) > 0;
             const btnSecu = document.getElementById("btnSecu");
 
-            // Gestion Mode Manuel
-            if(data.status.modeManuel) {
-                document.getElementById("btnMode").innerText = "MANUEL";
-                document.getElementById("btnMode").style.backgroundColor = "var(--orange)";
-                document.querySelectorAll(".btn-led").forEach(b => b.disabled = false);
-            } else {
-                document.getElementById("btnMode").innerText = "AUTO";
-                document.getElementById("btnMode").style.backgroundColor = "var(--green)";
-                document.querySelectorAll(".btn-led").forEach(b => b.disabled = true);
-            }
-
-            // GESTION ALERTE SÉCURITÉ
             if (isSecu) {
-                btnSecu.innerText = "SÉCURITÉ ACTIVÉE"; btnSecu.classList.add("active");
-                banner.innerText = "🛡️ SYSTÈME SOUS SURVEILLANCE";
-                banner.style.borderLeftColor = "var(--red)";
-
-                if (totalPers > 0) {
-                    banner.innerText = "🚨 ALERTE : INTRUSION !";
-                    banner.classList.add("intrusion-mode");
-                    if (window.navigator.vibrate) window.navigator.vibrate([500, 200, 500]);
-                    
-                    const maintenant = Date.now();
-                    if (maintenant - lastIntrusionTime > 8000) { // Parle toutes les 8 secondes
-                        parler("Alerte. Intrusion détectée dans la maison.");
-                        lastIntrusionTime = maintenant;
-                    }
-                } else {
-                    banner.classList.remove("intrusion-mode");
+                btnSecu.innerText = "SURVEILLANCE ACTIVÉE";
+                btnSecu.classList.add("active");
+                
+                if (hasIntrusion && !isAlerteActive) {
+                    isAlerteActive = true;
+                    document.getElementById("callScreen").style.display = "flex";
+                    parler("Attention. Une présence a été détectée. Veuillez vérifier votre domicile.");
+                    // iOS ne permet pas la vibration via JS sans interaction continue, 
+                    // mais la voix et l'écran suffisent pour la démo.
                 }
             } else {
-                btnSecu.innerText = "ACTIVER LA SURVEILLANCE"; btnSecu.classList.remove("active");
-                banner.innerText = "✅ SYSTÈME EN ORDRE"; 
-                banner.classList.remove("intrusion-mode");
-                banner.style.borderLeftColor = "var(--green)";
+                btnSecu.innerText = "ACTIVER LA SURVEILLANCE";
+                btnSecu.classList.remove("active");
+                stopAlerte();
             }
         });
 
-        // ACTIVER L'AUDIO AU PREMIER CLIC (Crucial)
-        window.addEventListener('click', () => {
-            parler(""); // Débloque le haut-parleur silencieusement
-        }, { once: true });
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     </script>
 </body>
 </html>
-
