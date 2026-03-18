@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Home IUT - Final</title>
+    <title>Smart Home IUT - Final v9</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root { --red: #ff3b30; --blue: #007aff; --green: #34c759; --orange: #ff9500; --bg: #f2f2f7; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 0; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 0; user-select: none; }
         .debug-bar { background: #000; padding: 10px; display: flex; gap: 8px; position: sticky; top: 0; z-index: 1000; }
-        .btn-test { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; font-size: 11px; text-transform: uppercase; }
+        .btn-test { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; font-size: 11px; }
         .container { padding: 15px; max-width: 600px; margin: 0 auto; }
-        .banner { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 8px solid var(--green); }
+        .banner { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 8px solid var(--green); transition: 0.3s; }
         .card { background: white; padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-top: 4px solid var(--blue); }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
         .box { background: #f8f9fa; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #eee; }
         .label { font-size: 10px; color: #888; text-transform: uppercase; display: block; }
         .value { font-size: 1.3em; font-weight: bold; color: var(--blue); }
-        .btn-main { width: 100%; padding: 15px; border-radius: 12px; border: none; color: white; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
-        .btn-led { flex: 1; padding: 10px; border-radius: 8px; border: 2px solid var(--blue); background: white; color: var(--blue); font-weight: bold; cursor: pointer; }
-        .btn-led:disabled { opacity: 0.3; cursor: not-allowed; }
-        .intrusion { background: var(--red) !important; color: white !important; animation: pulse 1s infinite; }
+        .btn-main { width: 100%; padding: 15px; border-radius: 12px; border: none; color: white; font-weight: bold; margin-bottom: 10px; cursor: pointer; font-size: 14px; }
+        .btn-led { flex: 1; padding: 12px; border-radius: 8px; border: 2px solid var(--blue); background: white; color: var(--blue); font-weight: bold; }
+        .btn-led:disabled { opacity: 0.3; }
+        .intrusion { background: var(--red) !important; color: white !important; animation: pulse 1s infinite; border-left-color: white !important; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
     </style>
 </head>
@@ -29,7 +30,7 @@
 
     <div class="debug-bar">
         <button class="btn-test" style="background:var(--red)" onclick="testerVib()">📳 VIBRER</button>
-        <button class="btn-test" style="background:var(--blue)" onclick="testerAudio()">🔊 PARLER</button>
+        <button class="btn-test" style="background:var(--blue)" id="unlockAudio" onclick="testerAudio()">🔊 ACTIVER SON</button>
         <button class="btn-test" style="background:var(--orange)" onclick="demanderPermission()">🔔 NOTIFS</button>
     </div>
 
@@ -37,8 +38,8 @@
         <div id="banner" class="banner">CHARGEMENT...</div>
 
         <div class="card" style="border-top-color: var(--orange)">
-            <button id="btnMode" class="btn-main" style="background: var(--green)" onclick="toggleMode()">MODE : AUTO</button>
-            <button id="btnSecu" class="btn-main" style="background: #8e8e93" onclick="toggleSecu()">SÉCURITÉ : OFF</button>
+            <button id="btnMode" class="btn-main" onclick="toggleMode()">MODE : AUTO</button>
+            <button id="btnSecu" class="btn-main" onclick="toggleSecu()">SÉCURITÉ : OFF</button>
         </div>
 
         <div class="card">
@@ -75,72 +76,71 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref("maison");
 
-        let alertActive = false;
-        let lastSpeak = 0;
+        let audioUnlocked = false;
+        let lastAlert = 0;
 
-        // --- FONCTIONS ACTIONS ---
-        function toggleMode() { db.child("status").once('value', s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
-        function toggleSecu() { db.child("status").once('value', s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
-        function setLed(led, val) { db.child("status").update({ [led]: val }); }
-
-        // --- TESTS ET PERMISSIONS ---
         function testerVib() { if(navigator.vibrate) navigator.vibrate([200, 100, 200]); }
-        function testerAudio() { 
-            alertActive = true; 
+        
+        function testerAudio() {
+            audioUnlocked = true;
             window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance("Audio activé");
+            const u = new SpeechSynthesisUtterance("Audio déverrouillé");
             u.lang = 'fr-FR';
             window.speechSynthesis.speak(u);
-        }
-        function demanderPermission() {
-            Notification.requestPermission().then(p => { if(p === 'granted') alert("Notifications OK !"); });
+            document.getElementById('unlockAudio').style.background = "var(--green)";
         }
 
-        // --- RÉCEPTION DONNÉES ---
+        function demanderPermission() {
+            Notification.requestPermission().then(p => { if(p === 'granted') alert("Notifications OK"); });
+        }
+
+        function toggleMode() { db.child("status").once('value', s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
+        function toggleSecu() { db.child("status").once('value', s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
+        function setLed(l, v) { db.child("status").update({ [l]: v }); }
+
         db.on("value", (snapshot) => {
             const d = snapshot.val();
             if(!d) return;
 
-            // Correction des Lux (on vérifie le nom exact dans ta DB)
+            // Mise à jour Capteurs (on utilise toLowerCase pour être sûr du nom Firebase)
             document.getElementById("t1").innerText = d.chambre1.temp;
             document.getElementById("h1").innerText = d.chambre1.hum;
-            document.getElementById("l1").innerText = d.chambre1.lux; // Assure-toi que c'est bien "lux" en minuscule dans Firebase
+            document.getElementById("l1").innerText = d.chambre1.lux;
             document.getElementById("p1").innerText = d.chambre1.pers;
-            
             document.getElementById("t2").innerText = d.chambre2.temp;
             document.getElementById("h2").innerText = d.chambre2.hum;
             document.getElementById("l2").innerText = d.chambre2.lux;
             document.getElementById("p2").innerText = d.chambre2.pers;
 
-            // Modes
             const isMan = d.status.modeManuel;
             const isSec = d.status.modeSecu;
+            
             document.getElementById("btnMode").innerText = isMan ? "MODE : MANUEL" : "MODE : AUTO";
             document.getElementById("btnMode").style.background = isMan ? "var(--orange)" : "var(--green)";
-            document.getElementById("btnSecu").innerText = isSec ? "SÉCURITÉ : ON" : "SÉCURITÉ : OFF";
+            document.getElementById("btnSecu").innerText = isSec ? "SÉCURITÉ : ACTIVÉE" : "SÉCURITÉ : OFF";
             document.getElementById("btnSecu").style.background = isSec ? "var(--red)" : "#8e8e93";
             document.querySelectorAll(".ctrl").forEach(b => b.disabled = !isMan);
 
-            // Alerte
-            const b = document.getElementById("banner");
-            const pres = (d.chambre1.pers || 0) + (d.chambre2.pers || 0);
+            const banner = document.getElementById("banner");
+            const presence = (parseInt(d.chambre1.pers) || 0) + (parseInt(d.chambre2.pers) || 0);
 
-            if(isSec && pres > 0) {
-                b.innerText = "🚨 INTRUSION DÉTECTÉE !";
-                b.classList.add("intrusion");
+            if(isSec && presence > 0) {
+                banner.innerText = "🚨 INTRUSION DÉTECTÉE !";
+                banner.classList.add("intrusion");
                 if(navigator.vibrate) navigator.vibrate(500);
-                if(alertActive && Date.now() - lastSpeak > 8000) {
-                    const msg = new SpeechSynthesisUtterance("Alerte présence détectée");
-                    msg.lang = 'fr-FR';
-                    window.speechSynthesis.speak(msg);
-                    lastSpeak = Date.now();
+                
+                if(audioUnlocked && Date.now() - lastAlert > 7000) {
+                    const m = new SpeechSynthesisUtterance("Alerte intrusion dans la maison");
+                    m.lang = 'fr-FR';
+                    window.speechSynthesis.speak(m);
+                    lastAlert = Date.now();
                 }
                 if(Notification.permission === 'granted') {
-                    navigator.serviceWorker.ready.then(r => r.showNotification("ALERTE", {body: "Mouvement détecté !", tag: "alert"}));
+                    navigator.serviceWorker.ready.then(r => r.showNotification("ALERTE", {body: "Présence détectée !", tag: "alert"}));
                 }
             } else {
-                b.innerText = isSec ? "🛡️ SURVEILLANCE ACTIVE" : "✅ SYSTÈME DÉSARMÉ";
-                b.classList.remove("intrusion");
+                banner.innerText = isSec ? "🛡️ SURVEILLANCE ACTIVE" : "✅ SYSTÈME DÉSARMÉ";
+                banner.classList.remove("intrusion");
             }
         });
 
