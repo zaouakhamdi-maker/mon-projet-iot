@@ -8,103 +8,71 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/553/553376.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
     <style>
-        :root {
-            --bg: #f2f2f7; --card-bg: #ffffff; --green: #34c759;
-            --blue: #007aff; --orange: #ff9500; --red: #ff3b30; --text: #1c1c1e;
-        }
-
-        body { 
-            font-family: -apple-system, system-ui, sans-serif; 
-            background: var(--bg); color: var(--text); 
-            margin: 0; padding: 15px; text-align: center;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        /* Conteneur pour éviter l'étirement sur PC */
+        :root { --bg: #f2f2f7; --card-bg: #ffffff; --green: #34c759; --blue: #007aff; --orange: #ff9500; --red: #ff3b30; --text: #1c1c1e; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; text-align: center; }
         .app-wrapper { max-width: 500px; margin: 0 auto; }
-
-        .banner {
-            background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px;
-            font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 10px solid var(--green);
-            transition: 0.3s;
-        }
-
-        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; }
-        
-        .card { 
-            background: var(--card-bg); border-radius: 15px; padding: 15px; 
-            width: 100%; box-sizing: border-box;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid var(--blue); 
-        }
+        .banner { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 10px solid var(--green); transition: 0.3s; }
+        .card { background: var(--card-bg); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid var(--blue); }
         .card-secu { border-top-color: var(--red); }
         .card-ctrl { border-top-color: var(--orange); }
-
-        .data-box { background: #f8f9fa; margin: 8px 0; padding: 10px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+        .data-box { background: #f8f9fa; padding: 8px; border-radius: 10px; display: flex; flex-direction: column; }
+        .label { font-size: 10px; color: #8e8e93; text-transform: uppercase; }
         .value { font-weight: bold; color: var(--blue); font-size: 1.1em; }
-
         .btn { padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px; }
-        .btn-mode { background: var(--green); color: white; width: 120px; }
+        .btn-mode { background: var(--green); color: white; width: 100%; margin-bottom: 10px; }
         .btn-secu { background: #8e8e93; color: white; width: 100%; }
         .btn-secu.active { background: var(--red); box-shadow: 0 0 15px rgba(255, 59, 48, 0.3); }
-        .btn-led { background: white; border: 2px solid var(--blue); color: var(--blue); flex: 1; margin: 5px; }
+        .btn-led { background: white; border: 2px solid var(--blue); color: var(--blue); flex: 1; margin: 5px; font-size: 12px; }
         .btn-led:disabled { opacity: 0.2; cursor: not-allowed; }
-
         .intrusion-mode { background: var(--red) !important; color: white !important; animation: pulse 0.8s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
-        
-        h1 { font-size: 22px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
-
     <div class="app-wrapper">
-        <h1>🏠 Dashboard Eco-Maison</h1>
         <div id="banner" class="banner">Initialisation...</div>
 
-        <div class="container">
-            <div class="card card-secu">
-                <h3>🛡️ Bouclier de Sécurité</h3>
-                <button id="btnSecu" class="btn btn-secu" onclick="toggleSecurity()">ACTIVER LA SURVEILLANCE</button>
-                <p style="font-size: 10px; color: gray; margin-top: 10px;">ℹ️ Cliquez pour autoriser l'alerte vocale</p>
-            </div>
+        <div class="card card-secu">
+            <button id="btnMode" class="btn btn-mode" onclick="toggleMode()">MODE : AUTO</button>
+            <button id="btnSecu" class="btn btn-secu" onclick="toggleSecurity()">ACTIVER LA SURVEILLANCE</button>
+        </div>
 
-            <div class="card card-ctrl">
-                <h3>🎮 Contrôle des LEDs</h3>
-                <div class="data-box">
-                    <span>Mode :</span>
-                    <button id="btnMode" class="btn btn-mode" onclick="toggleMode()">AUTO</button>
-                </div>
-                <div style="display: flex; justify-content: space-around;">
-                    <button id="l1on" onclick="setLed('L1', true)" class="btn btn-led">CH1 ON</button>
-                    <button id="l1off" onclick="setLed('L1', false)" class="btn btn-led">CH1 OFF</button>
-                </div>
-                <div style="display: flex; justify-content: space-around; margin-top: 10px;">
-                    <button id="l2on" onclick="setLed('L2', true)" class="btn btn-led">CH2 ON</button>
-                    <button id="l2off" onclick="setLed('L2', false)" class="btn btn-led">CH2 OFF</button>
-                </div>
+        <div class="card">
+            <h3>🛏️ Chambre 1</h3>
+            <div class="data-grid">
+                <div class="data-box"><span class="label">Temp</span><span class="value"><span id="t1">--</span>°C</span></div>
+                <div class="data-box"><span class="label">Humidité</span><span class="value"><span id="h1">--</span>%</span></div>
+                <div class="data-box"><span class="label">Lumière</span><span class="value"><span id="l1">--</span> lx</span></div>
+                <div class="data-box"><span class="label">Présence</span><span class="value" id="p1">--</span></div>
             </div>
+            <div style="display: flex;">
+                <button onclick="setLed('L1', true)" class="btn btn-led ctrl-btn">CH1 ON</button>
+                <button onclick="setLed('L1', false)" class="btn btn-led ctrl-btn">CH1 OFF</button>
+            </div>
+        </div>
 
-            <div class="card" style="width: 48%;">
-                <h3>Chambre 1</h3>
-                <div class="data-box"><span class="value" id="p1">--</span> pers</div>
-                <div class="data-box"><span class="value" id="l1">--</span> lx</div>
+        <div class="card">
+            <h3>🛌 Chambre 2</h3>
+            <div class="data-grid">
+                <div class="data-box"><span class="label">Temp</span><span class="value"><span id="t2">--</span>°C</span></div>
+                <div class="data-box"><span class="label">Humidité</span><span class="value"><span id="h2">--</span>%</span></div>
+                <div class="data-box"><span class="label">Lumière</span><span class="value"><span id="l2">--</span> lx</span></div>
+                <div class="data-box"><span class="label">Présence</span><span class="value" id="p2">--</span></div>
             </div>
+            <div style="display: flex;">
+                <button onclick="setLed('L2', true)" class="btn btn-led ctrl-btn">CH2 ON</button>
+                <button onclick="setLed('L2', false)" class="btn btn-led ctrl-btn">CH2 OFF</button>
+            </div>
+        </div>
 
-            <div class="card" style="width: 48%;">
-                <h3>Chambre 2</h3>
-                <div class="data-box"><span class="value" id="p2">--</span> pers</div>
-                <div class="data-box"><span class="value" id="l2">--</span> lx</div>
-            </div>
-
-            <div class="card">
-                <h3>⚡ Consommation : <span id="pow" class="value">--</span> W</h3>
-            </div>
+        <div class="card">
+            <h3>⚡ Énergie : <span id="pow" class="value">--</span> W</h3>
         </div>
     </div>
 
@@ -112,16 +80,9 @@
         const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref("maison");
-
         let lastIntrusionTime = 0;
 
-        function parler(message) {
-            window.speechSynthesis.cancel();
-            const msg = new SpeechSynthesisUtterance(message);
-            msg.lang = 'fr-FR';
-            window.speechSynthesis.speak(msg);
-        }
-
+        function parler(msg) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(msg); u.lang='fr-FR'; window.speechSynthesis.speak(u); }
         function toggleMode() { db.child("status").once('value').then(s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
         function toggleSecurity() { db.child("status").once('value').then(s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
         function setLed(led, state) { db.child("status").update({ [led]: state }); }
@@ -130,59 +91,50 @@
             const data = snapshot.val();
             if (!data) return;
 
-            // Update Capteurs
-            document.getElementById("p1").innerText = data.chambre1.pers;
-            document.getElementById("p2").innerText = data.chambre2.pers;
+            // Affichage données CH1
+            document.getElementById("t1").innerText = data.chambre1.temp;
+            document.getElementById("h1").innerText = data.chambre1.hum;
             document.getElementById("l1").innerText = data.chambre1.lux;
+            document.getElementById("p1").innerText = data.chambre1.pers;
+
+            // Affichage données CH2
+            document.getElementById("t2").innerText = data.chambre2.temp;
+            document.getElementById("h2").innerText = data.chambre2.hum;
             document.getElementById("l2").innerText = data.chambre2.lux;
+            document.getElementById("p2").innerText = data.chambre2.pers;
             document.getElementById("pow").innerText = data.energie.puissance;
 
-            const isSecu = data.status.modeSecu;
-            const totalPers = (data.chambre1.pers || 0) + (data.chambre2.pers || 0);
-            const banner = document.getElementById("banner");
-            const btnSecu = document.getElementById("btnSecu");
-
-            // Gestion Mode Manuel/Auto
-            const btnMode = document.getElementById("btnMode");
+            // Mode Manuel/Auto
             const isManuel = data.status.modeManuel;
-            if(isManuel) {
-                btnMode.innerText = "MANUEL"; btnMode.style.backgroundColor = "var(--orange)";
-                document.querySelectorAll(".btn-led").forEach(b => b.disabled = false);
-            } else {
-                btnMode.innerText = "AUTO"; btnMode.style.backgroundColor = "var(--green)";
-                document.querySelectorAll(".btn-led").forEach(b => b.disabled = true);
-            }
+            const btnM = document.getElementById("btnMode");
+            btnM.innerText = isManuel ? "MODE : MANUEL" : "MODE : AUTO";
+            btnM.style.backgroundColor = isManuel ? "var(--orange)" : "var(--green)";
+            document.querySelectorAll(".ctrl-btn").forEach(b => b.disabled = !isManuel);
 
-            // Gestion Sécurité
+            // Sécurité
+            const isSecu = data.status.modeSecu;
+            const banner = document.getElementById("banner");
+            const btnS = document.getElementById("btnSecu");
+            
             if (isSecu) {
-                btnSecu.innerText = "SÉCURITÉ ACTIVÉE"; btnSecu.classList.add("active");
+                btnS.innerText = "SÉCURITÉ ACTIVÉE"; btnS.classList.add("active");
                 banner.innerText = "🛡️ SURVEILLANCE ACTIVE";
-                banner.style.borderLeftColor = "var(--red)";
-                
-                if (totalPers > 0) {
-                    banner.innerText = "🚨 ALERTE : INTRUSION !";
+                if ((data.chambre1.pers + data.chambre2.pers) > 0) {
+                    banner.innerText = "🚨 INTRUSION DÉTECTÉE !";
                     banner.classList.add("intrusion-mode");
                     if (window.navigator.vibrate) window.navigator.vibrate([500, 200, 500]);
-                    
                     const maintenant = Date.now();
                     if (maintenant - lastIntrusionTime > 5000) {
-                        parler("Attention. Une intrusion a été détectée dans votre domicile.");
+                        parler("Attention. Une intrusion a été détectée.");
                         lastIntrusionTime = maintenant;
                     }
-                } else {
-                    banner.classList.remove("intrusion-mode");
-                }
+                } else { banner.classList.remove("intrusion-mode"); }
             } else {
-                btnSecu.innerText = "ACTIVER LA SURVEILLANCE"; btnSecu.classList.remove("active");
+                btnS.innerText = "ACTIVER LA SURVEILLANCE"; btnS.classList.remove("active");
                 banner.innerText = "✅ SYSTÈME EN ORDRE"; banner.classList.remove("intrusion-mode");
-                banner.style.borderLeftColor = "var(--green)";
             }
         });
-
-        // Activation du Service Worker pour PWA
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(console.error);
-        }
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     </script>
 </body>
 </html>
