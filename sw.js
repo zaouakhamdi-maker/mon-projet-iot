@@ -1,8 +1,16 @@
-self.addEventListener('install', (e) => {
+// Nom du cache pour permettre un chargement rapide
+const CACHE_NAME = 'myhome-v1';
+
+// Installation du Service Worker
+self.addEventListener('install', (event) => {
   console.log('Service Worker: Installé');
 });
 
-self.addEventListener('fetch', (e) => {
-  // Permet à l'application de fonctionner même avec une connexion instable
-  e.respondWith(fetch(e.request));
+// Gestion des requêtes (permet à l'app de s'ouvrir même avec un réseau faible)
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
+    })
+  );
 });
