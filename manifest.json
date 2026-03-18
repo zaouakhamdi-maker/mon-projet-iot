@@ -1,16 +1,15 @@
 {
-  "name": "Eco Maison IUT",
-  "short_name": "MyHome",
+  "name": "Smart Home IUT",
+  "short_name": "SmartHome",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ff3b30",
+  "background_color": "#f2f2f7",
+  "theme_color": "#007aff",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/553/553376.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
