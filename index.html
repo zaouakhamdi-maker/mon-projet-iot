@@ -96,71 +96,104 @@
     </div>
 
     <script>
-        // CONFIGURATION FIREBASE
-        const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database().ref("maison");
+    // 1. CONFIGURATION FIREBASE
+    const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("maison");
 
-        let lastAlert = 0;
+    let alertInit = false;
+    let lastAlertTime = 0;
 
-        // --- FONCTIONS DE TEST ---
-        function testerVibrer() {
-            if (navigator.vibrate) {
-                navigator.vibrate([500, 200, 500]);
-            } else {
-                alert("Vibration non supportée sur ce tel");
-            }
+    // 2. FONCTIONS DE TEST ET PERMISSIONS
+    function testerVib() { 
+        if(navigator.vibrate) navigator.vibrate([300, 100, 300]); 
+    }
+
+    function testerAudio() {
+        alertInit = true; 
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance("Système audio prêt");
+        u.lang = 'fr-FR';
+        window.speechSynthesis.speak(u);
+    }
+
+    function demanderPermission() {
+        if (!('Notification' in window)) {
+            alert("Ce navigateur ne supporte pas les notifications.");
+            return;
         }
 
-        function testerParler() {
-            window.speechSynthesis.cancel();
-            const msg = new SpeechSynthesisUtterance("Test du son réussi");
-            msg.lang = 'fr-FR';
-            window.speechSynthesis.speak(msg);
-        }
-
-        // --- LECTURE FIREBASE ---
-        db.on("value", (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
-
-            // Mise à jour interface
-            document.getElementById("t1").innerText = data.chambre1.temp;
-            document.getElementById("h1").innerText = data.chambre1.hum;
-            document.getElementById("l1").innerText = data.chambre1.lux;
-            document.getElementById("p1").innerText = data.chambre1.pers;
-            
-            document.getElementById("t2").innerText = data.chambre2.temp;
-            document.getElementById("h2").innerText = data.chambre2.hum;
-            document.getElementById("l2").innerText = data.chambre2.lux;
-            document.getElementById("p2").innerText = data.chambre2.pers;
-
-            // Logique intrusion automatique
-            const totalPers = (data.chambre1.pers || 0) + (data.chambre2.pers || 0);
-            const banner = document.getElementById("banner");
-
-            if (data.status.modeSecu && totalPers > 0) {
-                banner.innerText = "🚨 INTRUSION DÉTECTÉE !";
-                banner.classList.add("intrusion-active");
-                
-                // Vibreur auto
-                if (navigator.vibrate) navigator.vibrate(500);
-                
-                // Son auto (toutes les 8s)
-                if (Date.now() - lastAlert > 8000) {
-                    testerParler(); // On réutilise la fonction de test
-                    lastAlert = Date.now();
-                }
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                alert("Notifications activées !");
+                // Test de notification via le Service Worker (plus fiable sur Android)
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.showNotification("Système prêt", {
+                        body: "Vous recevrez les alertes ici.",
+                        icon: "https://cdn-icons-png.flaticon.com/512/553/553376.png",
+                        vibrate: [200, 100, 200]
+                    });
+                });
             } else {
-                banner.innerText = "✅ SYSTÈME SÉCURISÉ";
-                banner.classList.remove("intrusion-active");
+                alert("Notifications refusées. Vérifiez les réglages du téléphone.");
             }
         });
+    }
 
-        // Enregistrement Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+    // 3. LOGIQUE TEMPS RÉEL FIREBASE
+    db.on("value", (s) => {
+        const d = s.val();
+        if(!d) return;
+
+        // Mise à jour des chiffres (Temp, Hum, etc.)
+        document.getElementById("t1").innerText = d.chambre1.temp;
+        document.getElementById("h1").innerText = d.chambre1.hum;
+        document.getElementById("p1").innerText = d.chambre1.pers;
+        document.getElementById("t2").innerText = d.chambre2.temp;
+        document.getElementById("h2").innerText = d.chambre2.hum;
+        document.getElementById("p2").innerText = d.chambre2.pers;
+
+        const b = document.getElementById("banner");
+        const presenceTotal = (d.chambre1.pers || 0) + (d.chambre2.pers || 0);
+
+        // Si Mode Sécu ON et quelqu'un est là
+        if (d.status.modeSecu && presenceTotal > 0) {
+            b.innerText = "🚨 ALERTE INTRUSION !";
+            b.classList.add("intrusion-on");
+
+            // 1. Vibration
+            if(navigator.vibrate) navigator.vibrate(500);
+
+            // 2. Notification Push (si l'onglet est réduit)
+            if (Notification.permission === 'granted') {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification("ALERTE MAISON", {
+                        body: "Une présence a été détectée !",
+                        icon: "https://cdn-icons-png.flaticon.com/512/553/553376.png",
+                        tag: 'intrusion-alert' // Évite de spammer 50 notifs
+                    });
+                });
+            }
+
+            // 3. Son (si l'utilisateur a cliqué sur TEST AUDIO avant)
+            if(alertInit && (Date.now() - lastAlertTime > 8000)) {
+                const alertMsg = new SpeechSynthesisUtterance("Alerte. Présence détectée.");
+                alertMsg.lang = 'fr-FR';
+                window.speechSynthesis.speak(alertMsg);
+                lastAlertTime = Date.now();
+            }
+        } else {
+            b.innerText = d.status.modeSecu ? "🛡️ SURVEILLANCE ACTIVE" : "✅ SYSTÈME DÉSARMÉ";
+            b.classList.remove("intrusion-on");
         }
-    </script>
+    });
+
+    // 4. ENREGISTREMENT DU SERVICE WORKER
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(() => {
+            console.log("Service Worker enregistré !");
+        });
+    }
+</script>
 </body>
 </html>
