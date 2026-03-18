@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Home IUT</title>
+    <title>Smart Home Dashboard</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/553/553376.png">
@@ -17,8 +17,9 @@
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; text-align: center; }
         .wrapper { max-width: 500px; margin: 0 auto; }
         
-        /* Bouton de Test discret */
-        .btn-test { background: #e5e5ea; color: #3a3a3c; border: none; padding: 8px 15px; border-radius: 20px; font-size: 11px; margin-bottom: 15px; cursor: pointer; font-weight: bold; }
+        /* Section Tests */
+        .test-area { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-test { flex: 1; background: #e5e5ea; border: none; padding: 10px; border-radius: 10px; font-size: 11px; cursor: pointer; font-weight: bold; color: #3a3a3c; border: 1px solid #d1d1d6; }
         
         .banner { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 10px solid var(--green); }
         .card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid var(--blue); }
@@ -42,7 +43,10 @@
 </head>
 <body>
     <div class="wrapper">
-        <button class="btn-test" onclick="testerSysteme()">🛠️ TESTER SON & VIBREUR</button>
+        <div class="test-area">
+            <button class="btn-test" onclick="testerVibration()">📳 TEST VIBREUR</button>
+            <button class="btn-test" onclick="testerSon()">🔊 TEST AUDIO</button>
+        </div>
 
         <div id="banner" class="banner">Initialisation...</div>
 
@@ -55,13 +59,13 @@
             <h3>🛏️ Chambre 1</h3>
             <div class="data-grid">
                 <div class="data-box"><span class="label">Temp</span><span class="value" id="t1">--</span>°C</div>
-                <div class="data-box"><span class="label">Hum</span><span class="value" id="h1">--</span>%</div>
-                <div class="data-box"><span class="label">Lux</span><span class="value" id="l1">--</span> lx</div>
-                <div class="data-box"><span class="label">Pers</span><span class="value" id="p1">--</span></div>
+                <div class="data-box"><span class="label">Humidité</span><span class="value" id="h1">--</span>%</div>
+                <div class="data-box"><span class="label">Luminosité</span><span class="value" id="l1">--</span> lx</div>
+                <div class="data-box"><span class="label">Présence</span><span class="value" id="p1">--</span></div>
             </div>
             <div class="led-group">
-                <button onclick="setLed('L1', true)" class="btn btn-led ctrl-btn">CH1 ON</button>
-                <button onclick="setLed('L1', false)" class="btn btn-led ctrl-btn">CH1 OFF</button>
+                <button onclick="setLed('L1', true)" class="btn btn-led ctrl-btn">LED CH1 ON</button>
+                <button onclick="setLed('L1', false)" class="btn btn-led ctrl-btn">LED CH1 OFF</button>
             </div>
         </div>
 
@@ -69,51 +73,59 @@
             <h3>🛌 Chambre 2</h3>
             <div class="data-grid">
                 <div class="data-box"><span class="label">Temp</span><span class="value" id="t2">--</span>°C</div>
-                <div class="data-box"><span class="label">Hum</span><span class="value" id="h2">--</span>%</div>
-                <div class="data-box"><span class="label">Lux</span><span class="value" id="l2">--</span> lx</div>
-                <div class="data-box"><span class="label">Pers</span><span class="value" id="p2">--</span></div>
+                <div class="data-box"><span class="label">Humidité</span><span class="value" id="h2">--</span>%</div>
+                <div class="data-box"><span class="label">Luminosité</span><span class="value" id="l2">--</span> lx</div>
+                <div class="data-box"><span class="label">Présence</span><span class="value" id="p2">--</span></div>
             </div>
             <div class="led-group">
-                <button onclick="setLed('L2', true)" class="btn btn-led ctrl-btn">CH2 ON</button>
-                <button onclick="setLed('L2', false)" class="btn btn-led ctrl-btn">CH2 OFF</button>
+                <button onclick="setLed('L2', true)" class="btn btn-led ctrl-btn">LED CH2 ON</button>
+                <button onclick="setLed('L2', false)" class="btn btn-led ctrl-btn">LED CH2 OFF</button>
             </div>
         </div>
 
         <div class="card" style="background:#1c1c1e; color:white;">
-            <span class="label">Puissance Électrique</span>
+            <span class="label">Puissance Actuelle</span>
             <span id="pow" class="value" style="color:var(--green); font-size:2em;">--</span> <span style="color:var(--green)">W</span>
         </div>
     </div>
 
     <script>
+        // CONFIG FIREBASE
         const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref("maison");
 
-        let voiceReady = false;
         let lastAlertTime = 0;
 
-        // Fonction pour parler (version robuste pour mobile)
+        // FONCTION PARLER
         function parler(msg) {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(msg);
             u.lang = 'fr-FR';
-            u.volume = 1.0;
+            u.pitch = 1;
+            u.rate = 1;
             window.speechSynthesis.speak(u);
         }
 
-        // Fonction de TEST et de DEVERROUILLAGE
-        function testerSysteme() {
-            voiceReady = true; // On marque que l'utilisateur a interagi
-            if (window.navigator.vibrate) window.navigator.vibrate([200, 100, 200]);
-            parler("Système de sécurité opérationnel.");
-            alert("Test réussi ! Le son et le vibreur sont débloqués.");
+        // FONCTIONS DE TEST
+        function testerVibration() {
+            if (window.navigator.vibrate) {
+                window.navigator.vibrate([300, 100, 300]);
+            } else {
+                alert("Vibration non supportée sur ce navigateur.");
+            }
         }
 
+        function testerSon() {
+            parler("Test de la synthèse vocale réussi. Le système est prêt.");
+        }
+
+        // ACTIONS FIREBASE
         function toggleMode() { db.child("status").once('value').then(s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
         function toggleSecurity() { db.child("status").once('value').then(s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
         function setLed(led, state) { db.child("status").update({ [led]: state }); }
 
+        // MAJ TEMPS RÉEL
         db.on("value", (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
@@ -129,14 +141,14 @@
             document.getElementById("p2").innerText = data.chambre2.pers;
             document.getElementById("pow").innerText = data.energie.puissance;
 
-            // Modes
+            // Logique Mode
             const isManuel = data.status.modeManuel;
             const btnM = document.getElementById("btnMode");
             btnM.innerText = isManuel ? "MODE : MANUEL" : "MODE : AUTO";
             btnM.style.backgroundColor = isManuel ? "var(--orange)" : "var(--green)";
             document.querySelectorAll(".ctrl-btn").forEach(b => b.disabled = !isManuel);
 
-            // Alerte
+            // Logique Sécurité
             const isSecu = data.status.modeSecu;
             const banner = document.getElementById("banner");
             const btnS = document.getElementById("btnSecu");
@@ -146,11 +158,11 @@
                 btnS.innerText = "SÉCURITÉ ACTIVÉE"; btnS.classList.add("active");
                 banner.innerText = "🛡️ SURVEILLANCE ACTIVE";
                 if (presence > 0) {
-                    banner.innerText = "🚨 INTRUSION !";
+                    banner.innerText = "🚨 ALERTE : INTRUSION !";
                     banner.classList.add("intrusion");
                     if (window.navigator.vibrate) window.navigator.vibrate([500, 200, 500]);
                     if (Date.now() - lastAlertTime > 8000) {
-                        parler("Alerte. Présence détectée.");
+                        parler("Alerte. Présence détectée dans la maison.");
                         lastAlertTime = Date.now();
                     }
                 } else { banner.classList.remove("intrusion"); }
