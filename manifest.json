@@ -1,11 +1,10 @@
 {
-  "name": "Eco Maison Connectée IUT",
+  "name": "Eco Maison IUT",
   "short_name": "MyHome",
-  "description": "Système de surveillance et gestion d'énergie",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#e74c3c",
+  "theme_color": "#ff3b30",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/553/553376.png",
