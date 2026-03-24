@@ -1,217 +1,120 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Home V16 - Full Alertes</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#007aff">
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <style>
-        :root { --red: #ff3b30; --blue: #007aff; --green: #34c759; --orange: #ff9500; --bg: #f2f2f7; --dark: #1c1c1e; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 0; user-select: none; }
-        .debug-bar { background: #000; padding: 10px; display: flex; gap: 8px; position: sticky; top: 0; z-index: 1000; }
-        .btn-test { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: white; font-size: 11px; cursor: pointer; }
-        .container { padding: 15px; max-width: 600px; margin: 0 auto; }
-        .banner { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center; font-weight: bold; border-left: 8px solid var(--green); box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.3s; min-height: 20px; }
-        .card { background: white; padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-top: 4px solid var(--blue); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
-        .box { background: #f8f9fa; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #eee; }
-        .label { font-size: 10px; color: #888; text-transform: uppercase; display: block; margin-bottom: 4px; }
-        .value { font-size: 1.2em; font-weight: bold; color: var(--blue); }
-        .btn-main { width: 100%; padding: 15px; border-radius: 12px; border: none; color: white; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
-        .btn-led { flex: 1; padding: 12px; border-radius: 8px; border: 2px solid var(--blue); background: white; color: var(--blue); font-weight: bold; cursor: pointer; }
-        .btn-led:disabled { opacity: 0.3; cursor: not-allowed; border-color: #ccc; color: #ccc; }
-        .input-seuil { width: 45px; padding: 5px; text-align: center; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; }
-        .danger { color: var(--red) !important; animation: pulse 1s infinite; }
-        .intrusion-on { background: var(--red) !important; color: white !important; border-left-color: white !important; animation: blink 0.8s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        @keyframes blink { 0%, 100% { background: var(--red); } 50% { background: #b00000; } }
-    </style>
-</head>
-<body>
+<script>
+    const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("maison");
 
-    <div class="debug-bar">
-        <button class="btn-test" style="background:var(--red)" onclick="testerVib()">VIBRER</button>
-        <button class="btn-test" style="background:var(--blue)" id="btnAudio" onclick="activerSon()">SON: OFF</button>
-        <button class="btn-test" style="background:var(--orange)" onclick="demanderPermission()">NOTIFS</button>
-    </div>
+    let audioOK = false;
+    let lastAlert = 0;
+    // On stocke les seuils localement pour comparer instantanément
+    let sTemp = 30, sHum = 70; 
 
-    <div class="container">
-        <div id="banner" class="banner">INITIALISATION...</div>
+    // --- FONCTIONS ACTIONS ---
+    function testerVib() { if(navigator.vibrate) navigator.vibrate([200, 100, 200]); }
+    function activerSon() { 
+        audioOK = true; 
+        document.getElementById('btnAudio').style.background = "var(--green)"; 
+        document.getElementById('btnAudio').innerText = "SON: ON";
+        parler("Système réactif activé");
+    }
+    function parler(t) {
+        if(audioOK) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'fr-FR'; window.speechSynthesis.speak(u); }
+    }
+    function saveSeuils() {
+        sTemp = parseFloat(document.getElementById("setT").value);
+        sHum = parseFloat(document.getElementById("setH").value);
+        db.child("seuils").update({ tempMax: sTemp, humMax: sHum });
+    }
+    function toggleMode() { db.child("status").once('value', s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
+    function toggleSecu() { db.child("status").once('value', s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
+    function setLed(l, v) { db.child("status").update({ [l]: v }); }
 
-        <div class="card" style="border-top-color: var(--orange)">
-            <h3 style="margin:0; font-size: 14px; color: var(--orange)">⚙️ Réglages des Seuils</h3>
-            <div class="grid">
-                <div class="box"><span class="label">Temp Max</span><input type="number" id="setT" class="input-seuil"> °C</div>
-                <div class="box"><span class="label">Hum Max</span><input type="number" id="setH" class="input-seuil"> %</div>
-            </div>
-            <button class="btn-main" style="background: var(--orange); padding:10px;" onclick="saveSeuils()">APPLIQUER LES SEUILS</button>
-        </div>
+    // --- ÉCOUTEURS CIBLÉS (PLUS RAPIDE) ---
 
-        <div class="card" style="border-top-color: var(--dark)">
-            <button id="btnMode" class="btn-main" onclick="toggleMode()">MODE : ...</button>
-            <button id="btnSecu" class="btn-main" onclick="toggleSecu()">SÉCURITÉ : ...</button>
-            <div style="background:#1c1c1e; color:#34c759; padding:12px; border-radius:12px; text-align:center;">
-                <span class="label">Énergie Consommée</span>
-                <span style="font-size:1.6em; font-weight:bold" id="conso">0.00</span> kWh
-            </div>
-        </div>
-
-        <div class="card" id="cardCh1">
-            <h3 style="margin:0">🛏️ Chambre 1</h3>
-            <div class="grid">
-                <div class="box"><span class="label">Temp</span><span class="value" id="t1">--</span>°C</div>
-                <div class="box"><span class="label">Hum</span><span class="value" id="h1">--</span>%</div>
-                <div class="box"><span class="label">Lumière</span><span class="value" id="l1">--</span></div>
-                <div class="box"><span class="label">Présence</span><span class="value" id="p1">--</span></div>
-            </div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button onclick="setLed('L1', true)" class="btn-led c-btn">ON</button>
-                <button onclick="setLed('L1', false)" class="btn-led c-btn">OFF</button>
-            </div>
-        </div>
-
-        <div class="card" id="cardCh2">
-            <h3 style="margin:0">🛌 Chambre 2</h3>
-            <div class="grid">
-                <div class="box"><span class="label">Temp</span><span class="value" id="t2">--</span>°C</div>
-                <div class="box"><span class="label">Hum</span><span class="value" id="h2">--</span>%</div>
-                <div class="box"><span class="label">Lumière</span><span class="value" id="l2">--</span></div>
-                <div class="box"><span class="label">Présence</span><span class="value" id="p2">--</span></div>
-            </div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button onclick="setLed('L2', true)" class="btn-led c-btn">ON</button>
-                <button onclick="setLed('L2', false)" class="btn-led c-btn">OFF</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const firebaseConfig = { databaseURL: "https://maison-connecte-5be95-default-rtdb.europe-west1.firebasedatabase.app" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database().ref("maison");
-
-        let audioOK = false;
-        let lastAlert = 0;
-
-        function testerVib() { if(navigator.vibrate) navigator.vibrate([200, 100, 200]); }
-        function activerSon() { 
-            audioOK = true; 
-            document.getElementById('btnAudio').style.background = "var(--green)"; 
-            document.getElementById('btnAudio').innerText = "SON: ON";
-            parler("Système audio activé");
-        }
-        function demanderPermission() { Notification.requestPermission(); }
-
-        function parler(texte) {
-            if(audioOK) {
-                window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(texte);
-                u.lang = 'fr-FR';
-                u.rate = 1;
-                window.speechSynthesis.speak(u);
-            }
-        }
-
-        function saveSeuils() {
-            const t = document.getElementById("setT").value;
-            const h = document.getElementById("setH").value;
-            db.child("seuils").update({ tempMax: t, humMax: h });
-            alert("Seuils mis à jour !");
-        }
-
-        function toggleMode() { db.child("status").once('value', s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
-        function toggleSecu() { db.child("status").once('value', s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
-        function setLed(l, v) { db.child("status").update({ [l]: v }); }
-
-        db.on("value", (snapshot) => {
-            const d = snapshot.val();
-            if(!d) return;
-
-            // --- MISE À JOUR UI ---
-            const sTemp = d.seuils ? parseFloat(d.seuils.tempMax) : 30;
-            const sHum = d.seuils ? parseFloat(d.seuils.humMax) : 70;
+    // 1. Écoute des seuils (une seule fois ou au changement)
+    db.child("seuils").on("value", s => {
+        const val = s.val();
+        if(val) {
+            sTemp = parseFloat(val.tempMax);
+            sHum = parseFloat(val.humMax);
             document.getElementById("setT").value = sTemp;
             document.getElementById("setH").value = sHum;
+        }
+    });
 
-            const valT1 = parseFloat(d.chambre1.temp), valH1 = parseFloat(d.chambre1.hum);
-            const valT2 = parseFloat(d.chambre2.temp), valH2 = parseFloat(d.chambre2.hum);
-            const p1 = parseInt(d.chambre1.pers) || 0, p2 = parseInt(d.chambre2.pers) || 0;
+    // 2. Écoute de la Chambre 1 (Instantanné)
+    db.child("chambre1").on("value", s => {
+        const d = s.val();
+        document.getElementById("t1").innerText = d.temp;
+        document.getElementById("h1").innerText = d.hum;
+        document.getElementById("l1").innerText = d.lux || d.Lux;
+        document.getElementById("p1").innerText = d.pers;
+        document.getElementById("t1").className = parseFloat(d.temp) > sTemp ? "value danger" : "value";
+        checkAlertes();
+    });
 
-            document.getElementById("t1").innerText = valT1; document.getElementById("h1").innerText = valH1;
-            document.getElementById("t2").innerText = valT2; document.getElementById("h2").innerText = valH2;
-            document.getElementById("p1").innerText = p1; document.getElementById("p2").innerText = p2;
-            document.getElementById("l1").innerText = d.chambre1.lux || d.chambre1.Lux;
-            document.getElementById("l2").innerText = d.chambre2.lux || d.chambre2.Lux;
-            document.getElementById("conso").innerText = d.status.consommation || "0.00";
+    // 3. Écoute de la Chambre 2 (Instantanné)
+    db.child("chambre2").on("value", s => {
+        const d = s.val();
+        document.getElementById("t2").innerText = d.temp;
+        document.getElementById("h2").innerText = d.hum;
+        document.getElementById("l2").innerText = d.lux || d.Lux;
+        document.getElementById("p2").innerText = d.pers;
+        document.getElementById("t2").className = parseFloat(d.temp) > sTemp ? "value danger" : "value";
+        checkAlertes();
+    });
 
-            // --- GESTION DES COULEURS D'ALERTE ---
-            document.getElementById("t1").className = valT1 > sTemp ? "value danger" : "value";
-            document.getElementById("h1").className = valH1 > sHum ? "value danger" : "value";
-            document.getElementById("t2").className = valT2 > sTemp ? "value danger" : "value";
-            document.getElementById("h2").className = valH2 > sHum ? "value danger" : "value";
+    // 4. Écoute du Statut (Modes et Conso)
+    db.child("status").on("value", s => {
+        const d = s.val();
+        document.getElementById("conso").innerText = d.consommation || "0.00";
+        const isMan = d.modeManuel;
+        const isSec = d.modeSecu;
+        document.getElementById("btnMode").innerText = isMan ? "MODE : MANUEL" : "MODE : AUTOMATIQUE";
+        document.getElementById("btnMode").style.background = isMan ? "var(--orange)" : "var(--green)";
+        document.getElementById("btnSecu").innerText = isSec ? "SÉCURITÉ : ACTIVÉE" : "SÉCURITÉ : OFF";
+        document.getElementById("btnSecu").style.background = isSec ? "var(--red)" : "#8e8e93";
+        document.querySelectorAll(".c-btn").forEach(b => b.disabled = !isMan);
+        checkAlertes();
+    });
 
-            // --- LOGIQUE D'ALERTE PRIORISÉE ---
+    // --- LOGIQUE D'ALERTE OPTIMISÉE ---
+    function checkAlertes() {
+        db.once("value", (snap) => {
+            const d = snap.val();
             const banner = document.getElementById("banner");
-            const isSecu = d.status.modeSecu;
-            let alerteTexte = "";
+            const p1 = parseInt(d.chambre1.pers) || 0;
+            const p2 = parseInt(d.chambre2.pers) || 0;
+            const t1 = parseFloat(d.chambre1.temp), t2 = parseFloat(d.chambre2.temp);
+            const h1 = parseFloat(d.chambre1.hum), h2 = parseFloat(d.chambre2.hum);
 
-            // 1. Priorité CRITIQUE : Intrusion
-            if (isSecu && (p1 > 0 || p2 > 0)) {
-                const zone = p1 > 0 && p2 > 0 ? "maison" : (p1 > 0 ? "chambre 1" : "chambre 2");
-                alerteTexte = `🚨 INTRUSION DANS LA ${zone.toUpperCase()} !`;
+            if (d.status.modeSecu && (p1 > 0 || p2 > 0)) {
                 banner.className = "banner intrusion-on";
-                banner.innerText = alerteTexte;
-                triggerAlerte("ALERTE SÉCURITÉ", `Intrusion détectée dans la ${zone}`);
-            } 
-            // 2. Priorité HAUTE : Seuils dépassés
-            else if (valT1 > sTemp || valT2 > sTemp || valH1 > sHum || valH2 > sHum) {
-                let chambresCritiques = [];
-                if(valT1 > sTemp || valH1 > sHum) chambresCritiques.push("Chambre 1");
-                if(valT2 > sTemp || valH2 > sHum) chambresCritiques.push("Chambre 2");
-                
-                alerteTexte = `⚠️ ALERTE SEUIL : ${chambresCritiques.join(" & ")}`;
+                banner.innerText = "🚨 INTRUSION DÉTECTÉE !";
+                triggerNotification("ALERTE SÉCURITÉ", "Mouvement détecté !");
+            } else if (t1 > sTemp || t2 > sTemp || h1 > sHum || h2 > sHum) {
                 banner.className = "banner";
                 banner.style.background = "var(--orange)";
                 banner.style.color = "white";
-                banner.innerText = alerteTexte;
-                triggerAlerte("ALERTE SEUIL", `Dépassement détecté dans : ${chambresCritiques.join(" et ")}`);
-            } 
-            // 3. État Normal
-            else {
-                banner.innerText = isSecu ? "🛡️ SURVEILLANCE ACTIVE" : "✅ SYSTÈME EN ORDRE";
+                banner.innerText = "⚠️ SEUIL DÉPASSÉ";
+                triggerNotification("ALERTE SEUIL", "Vérifiez la température ou l'humidité");
+            } else {
                 banner.className = "banner";
                 banner.style.background = "white";
                 banner.style.color = "black";
+                banner.innerText = d.status.modeSecu ? "🛡️ SURVEILLANCE ACTIVE" : "✅ SYSTÈME OK";
             }
-
-            // --- BOUTONS MODE ---
-            const isMan = d.status.modeManuel;
-            document.getElementById("btnMode").innerText = isMan ? "MODE : MANUEL" : "MODE : AUTOMATIQUE";
-            document.getElementById("btnMode").style.background = isMan ? "var(--orange)" : "var(--green)";
-            document.getElementById("btnSecu").innerText = isSecu ? "SÉCURITÉ : ACTIVÉE" : "SÉCURITÉ : OFF";
-            document.getElementById("btnSecu").style.background = isSecu ? "var(--red)" : "#8e8e93";
-            document.querySelectorAll(".c-btn").forEach(b => b.disabled = !isMan);
         });
+    }
 
-        function triggerAlerte(titre, corps) {
-            const now = Date.now();
-            if (now - lastAlert > 15000) { // Anti-spam : une alerte toutes les 15s max
-                if (Notification.permission === 'granted') {
-                    navigator.serviceWorker.ready.then(reg => {
-                        reg.showNotification(titre, { body: corps, icon: "https://cdn-icons-png.flaticon.com/512/553/553376.png", vibrate: [500, 200, 500], tag: "alert-home" });
-                    });
-                }
-                parler(corps);
-                lastAlert = now;
+    function triggerNotification(titre, corps) {
+        if (Date.now() - lastAlert > 10000) {
+            if (Notification.permission === 'granted') {
+                navigator.serviceWorker.ready.then(r => r.showNotification(titre, { body: corps, tag: "alert" }));
             }
+            parler(corps);
+            lastAlert = Date.now();
         }
+    }
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js?v=16');
-        }
-    </script>
-</body>
-</html>
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js?v=16.1'); }
+</script>
