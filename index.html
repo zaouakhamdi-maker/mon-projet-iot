@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Home V16.4 - Énergie</title>
+    <title>Smart Home V16.5 - Puissance & Courant</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#007aff">
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -39,15 +39,15 @@
     </div>
 
     <div class="container">
-        <div id="banner" class="banner">INITIALISATION...</div>
+        <div id="banner" class="banner">SYNCHRONISATION...</div>
 
         <div class="card" style="border-top-color: var(--orange)">
-            <h3 style="margin:0; font-size: 14px; color: var(--orange)">⚙️ Réglages des Seuils</h3>
+            <h3 style="margin:0; font-size: 14px; color: var(--orange)">⚙️ Paramètres d'Alerte</h3>
             <div class="grid">
                 <div class="box"><span class="label">Temp Max</span><input type="number" id="setT" class="input-seuil"> °C</div>
                 <div class="box"><span class="label">Hum Max</span><input type="number" id="setH" class="input-seuil"> %</div>
             </div>
-            <button class="btn-main" style="background: var(--orange); padding:10px;" onclick="saveSeuils()">APPLIQUER LES SEUILS</button>
+            <button class="btn-main" style="background: var(--orange); padding:10px;" onclick="saveSeuils()">VALIDER LES SEUILS</button>
         </div>
 
         <div class="card" style="border-top-color: var(--dark)">
@@ -55,18 +55,18 @@
             <button id="btnSecu" class="btn-main" onclick="toggleSecu()">SÉCURITÉ : ...</button>
             
             <div class="grid">
-                <div class="box" style="background:#1c1c1e; color:#34c759;">
+                <div class="box" style="background:#1c1c1e; color:#34c759; border:none;">
                     <span class="label" style="color:#34c759">Puissance</span>
-                    <span style="font-size:1.4em; font-weight:bold" id="puissance">0</span> W
+                    <span style="font-size:1.5em; font-weight:bold" id="puissance">0</span> W
                 </div>
-                <div class="box" style="background:#1c1c1e; color:#34c759;">
+                <div class="box" style="background:#1c1c1e; color:#34c759; border:none;">
                     <span class="label" style="color:#34c759">Courant</span>
-                    <span style="font-size:1.4em; font-weight:bold" id="courant">0</span> mA
+                    <span style="font-size:1.5em; font-weight:bold" id="courant">0</span> mA
                 </div>
             </div>
         </div>
 
-        <div class="card" id="cardCh1">
+        <div class="card">
             <h3 style="margin:0">🛏️ Chambre 1</h3>
             <div class="grid">
                 <div class="box"><span class="label">Temp</span><span class="value" id="t1">--</span>°C</div>
@@ -80,7 +80,7 @@
             </div>
         </div>
 
-        <div class="card" id="cardCh2">
+        <div class="card">
             <h3 style="margin:0">🛌 Chambre 2</h3>
             <div class="grid">
                 <div class="box"><span class="label">Temp</span><span class="value" id="t2">--</span>°C</div>
@@ -142,6 +142,16 @@
             document.getElementById("setT").value = sTemp;
             document.getElementById("setH").value = sHum;
 
+            // --- ENERGIE (PUISSANCE ET COURANT) ---
+            if(d.energie) {
+                document.getElementById("puissance").innerText = d.energie.puissance || "0";
+                document.getElementById("courant").innerText = d.energie.courant || "0";
+            } else {
+                // Fallback si l'Arduino envoie à la racine
+                document.getElementById("puissance").innerText = d.puissance || "0";
+                document.getElementById("courant").innerText = d.courant || "0";
+            }
+
             // --- CHAMBRE 1 ---
             const vT1 = d.chambre1.temp, vH1 = d.chambre1.hum, vP1 = d.chambre1.pers;
             document.getElementById("t1").innerText = vT1;
@@ -156,45 +166,36 @@
             document.getElementById("l2").innerText = d.chambre2.lux;
             document.getElementById("p2").innerText = vP2;
 
-            // --- ÉNERGIE ---
-            if(d.energie) {
-                document.getElementById("puissance").innerText = d.energie.puissance || "0";
-                document.getElementById("courant").innerText = d.energie.courant || "0";
-            }
-
-            // --- DANGER VISUEL ---
+            // --- ALERTES VISUELLES ---
             document.getElementById("t1").className = vT1 > sTemp ? "value danger" : "value";
-            document.getElementById("h1").className = vH1 > sHum ? "value danger" : "value";
             document.getElementById("t2").className = vT2 > sTemp ? "value danger" : "value";
-            document.getElementById("h2").className = vH2 > sHum ? "value danger" : "value";
 
-            // --- BANNIÈRE ALERTE ---
             const banner = document.getElementById("banner");
-            const isSecu = d.status.modeSecu;
+            const isSec = d.status.modeSecu;
             
-            if (isSecu && (vP1 > 0 || vP2 > 0)) {
+            if (isSec && (vP1 > 0 || vP2 > 0)) {
                 banner.className = "banner intrusion-on";
                 banner.innerText = "🚨 INTRUSION DÉTECTÉE !";
-                triggerAlerte("ALERTE SÉCURITÉ", "Mouvement suspect détecté !");
+                triggerAlerte("ALERTE SÉCURITÉ", "Mouvement détecté !");
             } else if (vT1 > sTemp || vT2 > sTemp || vH1 > sHum || vH2 > sHum) {
                 banner.className = "banner";
                 banner.style.background = "var(--orange)";
                 banner.style.color = "white";
                 banner.innerText = "⚠️ SEUIL DÉPASSÉ";
-                triggerAlerte("ALERTE SEUIL", "Une pièce dépasse les limites fixées.");
+                triggerAlerte("ALERTE SEUIL", "Vérifiez la température.");
             } else {
-                banner.innerText = isSecu ? "🛡️ SURVEILLANCE ACTIVE" : "✅ SYSTÈME EN ORDRE";
+                banner.innerText = isSec ? "🛡️ SURVEILLANCE ACTIVE" : "✅ SYSTÈME OK";
                 banner.className = "banner";
                 banner.style.background = "white";
                 banner.style.color = "black";
             }
 
-            // --- ÉTAT BOUTONS ---
+            // --- BOUTONS ---
             const isMan = d.status.modeManuel;
             document.getElementById("btnMode").innerText = isMan ? "MODE : MANUEL" : "MODE : AUTOMATIQUE";
             document.getElementById("btnMode").style.background = isMan ? "var(--orange)" : "var(--green)";
-            document.getElementById("btnSecu").innerText = isSecu ? "SÉCURITÉ : ACTIVÉE" : "SÉCURITÉ : OFF";
-            document.getElementById("btnSecu").style.background = isSecu ? "var(--red)" : "#8e8e93";
+            document.getElementById("btnSecu").innerText = isSec ? "SÉCURITÉ : ACTIVÉE" : "SÉCURITÉ : OFF";
+            document.getElementById("btnSecu").style.background = isSec ? "var(--red)" : "#8e8e93";
             document.querySelectorAll(".c-btn").forEach(b => b.disabled = !isMan);
         });
 
@@ -203,7 +204,7 @@
             if (now - lastAlert > 15000) {
                 if (Notification.permission === 'granted') {
                     navigator.serviceWorker.ready.then(reg => {
-                        reg.showNotification(titre, { body: corps, icon: "https://cdn-icons-png.flaticon.com/512/553/553376.png" });
+                        reg.showNotification(titre, { body: corps });
                     });
                 }
                 parler(corps);
@@ -211,8 +212,7 @@
             }
         }
 
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js?v=16'); }
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js?v=16.5'); }
     </script>
 </body>
 </html>
-
