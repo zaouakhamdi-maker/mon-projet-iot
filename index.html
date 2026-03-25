@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Home V16.5 - Puissance & Courant</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#007aff">
+    <title>Smart Home V16.7 - Contrôle Total</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -23,7 +21,7 @@
         .btn-main { width: 100%; padding: 15px; border-radius: 12px; border: none; color: white; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
         .btn-led { flex: 1; padding: 12px; border-radius: 8px; border: 2px solid var(--blue); background: white; color: var(--blue); font-weight: bold; cursor: pointer; }
         .btn-led:disabled { opacity: 0.3; cursor: not-allowed; border-color: #ccc; color: #ccc; }
-        .input-seuil { width: 45px; padding: 5px; text-align: center; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; color: var(--orange); }
+        .input-seuil { width: 55px; padding: 8px; text-align: center; border: 2px solid #ddd; border-radius: 8px; font-weight: bold; color: var(--orange); font-size: 16px; }
         .danger { color: var(--red) !important; animation: pulse 1s infinite; }
         .intrusion-on { background: var(--red) !important; color: white !important; border-left-color: white !important; animation: blink 0.8s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
@@ -39,15 +37,21 @@
     </div>
 
     <div class="container">
-        <div id="banner" class="banner">SYNCHRONISATION...</div>
+        <div id="banner" class="banner">CHARGEMENT...</div>
 
         <div class="card" style="border-top-color: var(--orange)">
-            <h3 style="margin:0; font-size: 14px; color: var(--orange)">⚙️ Paramètres d'Alerte</h3>
+            <h3 style="margin:0; font-size: 14px; color: var(--orange)">⚙️ Configuration des Seuils</h3>
             <div class="grid">
-                <div class="box"><span class="label">Temp Max</span><input type="number" id="setT" class="input-seuil"> °C</div>
-                <div class="box"><span class="label">Hum Max</span><input type="number" id="setH" class="input-seuil"> %</div>
+                <div class="box">
+                    <span class="label">Temp Max</span>
+                    <input type="number" id="setT" class="input-seuil"> °C
+                </div>
+                <div class="box">
+                    <span class="label">Hum Max</span>
+                    <input type="number" id="setH" class="input-seuil"> %
+                </div>
             </div>
-            <button class="btn-main" style="background: var(--orange); padding:10px;" onclick="saveSeuils()">VALIDER LES SEUILS</button>
+            <button class="btn-main" style="background: var(--orange); padding:12px;" onclick="saveSeuils()">APPLIQUER LES NOUVEAUX SEUILS</button>
         </div>
 
         <div class="card" style="border-top-color: var(--dark)">
@@ -102,14 +106,10 @@
 
         let audioOK = false;
         let lastAlert = 0;
+        let seuilsCharges = false; // Pour ne pas écraser la saisie utilisateur
 
         function testerVib() { if(navigator.vibrate) navigator.vibrate([200, 100, 200]); }
-        function activerSon() { 
-            audioOK = true; 
-            document.getElementById('btnAudio').style.background = "var(--green)"; 
-            document.getElementById('btnAudio').innerText = "SON: ON";
-            parler("Système audio activé");
-        }
+        function activerSon() { audioOK = true; document.getElementById('btnAudio').style.background = "var(--green)"; document.getElementById('btnAudio').innerText = "SON: ON"; parler("Audio activé"); }
         function demanderPermission() { Notification.requestPermission(); }
 
         function parler(texte) {
@@ -121,80 +121,79 @@
             }
         }
 
+        // --- ENREGISTRER LES SEUILS ---
         function saveSeuils() {
             const t = document.getElementById("setT").value;
             const h = document.getElementById("setH").value;
-            db.child("seuils").update({ tempMax: t, humMax: h });
-            alert("Seuils mis à jour !");
+            db.child("seuils").update({ tempMax: parseFloat(t), humMax: parseFloat(h) })
+              .then(() => alert("✅ Seuils enregistrés !"));
         }
 
         function toggleMode() { db.child("status").once('value', s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
         function toggleSecu() { db.child("status").once('value', s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
         function setLed(l, v) { db.child("status").update({ [l]: v }); }
 
+        // --- LECTURE TEMPS RÉEL ---
         db.on("value", (snapshot) => {
             const d = snapshot.val();
             if(!d) return;
 
-            // --- SEUILS ---
-            const sTemp = d.seuils ? parseFloat(d.seuils.tempMax) : 30;
-            const sHum = d.seuils ? parseFloat(d.seuils.humMax) : 70;
-            document.getElementById("setT").value = sTemp;
-            document.getElementById("setH").value = sHum;
+            // Charger les seuils une seule fois au début
+            if(!seuilsCharges && d.seuils) {
+                document.getElementById("setT").value = d.seuils.tempMax;
+                document.getElementById("setH").value = d.seuils.humMax;
+                seuilsCharges = true;
+            }
 
-            // --- ENERGIE (PUISSANCE ET COURANT) ---
+            const sT = d.seuils ? d.seuils.tempMax : 30;
+            const sH = d.seuils ? d.seuils.humMax : 70;
+
+            // Énergie
             if(d.energie) {
                 document.getElementById("puissance").innerText = d.energie.puissance || "0";
                 document.getElementById("courant").innerText = d.energie.courant || "0";
-            } else {
-                // Fallback si l'Arduino envoie à la racine
-                document.getElementById("puissance").innerText = d.puissance || "0";
-                document.getElementById("courant").innerText = d.courant || "0";
             }
 
-            // --- CHAMBRE 1 ---
+            // Chambre 1
             const vT1 = d.chambre1.temp, vH1 = d.chambre1.hum, vP1 = d.chambre1.pers;
             document.getElementById("t1").innerText = vT1;
             document.getElementById("h1").innerText = vH1;
             document.getElementById("l1").innerText = d.chambre1.lux;
             document.getElementById("p1").innerText = vP1;
 
-            // --- CHAMBRE 2 ---
+            // Chambre 2
             const vT2 = d.chambre2.temp, vH2 = d.chambre2.hum, vP2 = d.chambre2.pers;
             document.getElementById("t2").innerText = vT2;
             document.getElementById("h2").innerText = vH2;
             document.getElementById("l2").innerText = d.chambre2.lux;
             document.getElementById("p2").innerText = vP2;
 
-            // --- ALERTES VISUELLES ---
-            document.getElementById("t1").className = vT1 > sTemp ? "value danger" : "value";
-            document.getElementById("t2").className = vT2 > sTemp ? "value danger" : "value";
+            // Style Danger
+            document.getElementById("t1").className = vT1 > sT ? "value danger" : "value";
+            document.getElementById("t2").className = vT2 > sT ? "value danger" : "value";
 
+            // Bannière
             const banner = document.getElementById("banner");
             const isSec = d.status.modeSecu;
-            
             if (isSec && (vP1 > 0 || vP2 > 0)) {
                 banner.className = "banner intrusion-on";
-                banner.innerText = "🚨 INTRUSION DÉTECTÉE !";
-                triggerAlerte("ALERTE SÉCURITÉ", "Mouvement détecté !");
-            } else if (vT1 > sTemp || vT2 > sTemp || vH1 > sHum || vH2 > sHum) {
+                banner.innerText = "🚨 INTRUSION !";
+                triggerAlerte("SÉCURITÉ", "Intrusion détectée !");
+            } else if (vT1 > sT || vT2 > sT) {
                 banner.className = "banner";
                 banner.style.background = "var(--orange)";
-                banner.style.color = "white";
-                banner.innerText = "⚠️ SEUIL DÉPASSÉ";
-                triggerAlerte("ALERTE SEUIL", "Vérifiez la température.");
+                banner.innerText = "⚠️ TEMPÉRATURE ÉLEVÉE";
             } else {
                 banner.innerText = isSec ? "🛡️ SURVEILLANCE ACTIVE" : "✅ SYSTÈME OK";
                 banner.className = "banner";
                 banner.style.background = "white";
-                banner.style.color = "black";
             }
 
-            // --- BOUTONS ---
+            // Boutons
             const isMan = d.status.modeManuel;
-            document.getElementById("btnMode").innerText = isMan ? "MODE : MANUEL" : "MODE : AUTOMATIQUE";
+            document.getElementById("btnMode").innerText = isMan ? "MODE : MANUEL" : "MODE : AUTO";
             document.getElementById("btnMode").style.background = isMan ? "var(--orange)" : "var(--green)";
-            document.getElementById("btnSecu").innerText = isSec ? "SÉCURITÉ : ACTIVÉE" : "SÉCURITÉ : OFF";
+            document.getElementById("btnSecu").innerText = isSec ? "SÉCURITÉ : ON" : "SÉCURITÉ : OFF";
             document.getElementById("btnSecu").style.background = isSec ? "var(--red)" : "#8e8e93";
             document.querySelectorAll(".c-btn").forEach(b => b.disabled = !isMan);
         });
@@ -202,17 +201,10 @@
         function triggerAlerte(titre, corps) {
             const now = Date.now();
             if (now - lastAlert > 15000) {
-                if (Notification.permission === 'granted') {
-                    navigator.serviceWorker.ready.then(reg => {
-                        reg.showNotification(titre, { body: corps });
-                    });
-                }
                 parler(corps);
                 lastAlert = now;
             }
         }
-
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js?v=16.5'); }
     </script>
 </body>
 </html>
