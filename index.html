@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Home V16.7 - Contrôle Total</title>
+    <title>Smart Home V16.9 - Mode Démo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -22,7 +22,7 @@
         .btn-led { flex: 1; padding: 12px; border-radius: 8px; border: 2px solid var(--blue); background: white; color: var(--blue); font-weight: bold; cursor: pointer; }
         .btn-led:disabled { opacity: 0.3; cursor: not-allowed; border-color: #ccc; color: #ccc; }
         .input-seuil { width: 55px; padding: 8px; text-align: center; border: 2px solid #ddd; border-radius: 8px; font-weight: bold; color: var(--orange); font-size: 16px; }
-        .danger { color: var(--red) !important; animation: pulse 1s infinite; }
+        .danger { color: var(--red) !important; animation: pulse 1s infinite; font-weight: 900 !important; }
         .intrusion-on { background: var(--red) !important; color: white !important; border-left-color: white !important; animation: blink 0.8s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         @keyframes blink { 0%, 100% { background: var(--red); } 50% { background: #b00000; } }
@@ -40,38 +40,31 @@
         <div id="banner" class="banner">CHARGEMENT...</div>
 
         <div class="card" style="border-top-color: var(--orange)">
-            <h3 style="margin:0; font-size: 14px; color: var(--orange)">⚙️ Configuration des Seuils</h3>
+            <h3 style="margin:0; font-size: 14px; color: var(--orange)">⚙️ Réglage des Seuils</h3>
             <div class="grid">
-                <div class="box">
-                    <span class="label">Temp Max</span>
-                    <input type="number" id="setT" class="input-seuil"> °C
-                </div>
-                <div class="box">
-                    <span class="label">Hum Max</span>
-                    <input type="number" id="setH" class="input-seuil"> %
-                </div>
+                <div class="box"><span class="label">Temp Max</span><input type="number" id="setT" class="input-seuil"> °C</div>
+                <div class="box"><span class="label">Hum Max</span><input type="number" id="setH" class="input-seuil"> %</div>
             </div>
-            <button class="btn-main" style="background: var(--orange); padding:12px;" onclick="saveSeuils()">APPLIQUER LES NOUVEAUX SEUILS</button>
+            <button class="btn-main" style="background: var(--orange); padding:12px;" onclick="saveSeuils()">VALIDER LES SEUILS</button>
         </div>
 
         <div class="card" style="border-top-color: var(--dark)">
             <button id="btnMode" class="btn-main" onclick="toggleMode()">MODE : ...</button>
             <button id="btnSecu" class="btn-main" onclick="toggleSecu()">SÉCURITÉ : ...</button>
-            
             <div class="grid">
                 <div class="box" style="background:#1c1c1e; color:#34c759; border:none;">
                     <span class="label" style="color:#34c759">Puissance</span>
-                    <span style="font-size:1.5em; font-weight:bold" id="puissance">0</span> W
+                    <span id="puissance" style="font-size:1.4em; font-weight:bold">0</span> W
                 </div>
                 <div class="box" style="background:#1c1c1e; color:#34c759; border:none;">
                     <span class="label" style="color:#34c759">Courant</span>
-                    <span style="font-size:1.5em; font-weight:bold" id="courant">0</span> mA
+                    <span id="courant" style="font-size:1.4em; font-weight:bold">0</span> mA
                 </div>
             </div>
         </div>
 
         <div class="card">
-            <h3 style="margin:0">🛏️ Chambre 1</h3>
+            <h3 style="margin:0">🛏️ Chambre 1 <small style="font-weight:normal; font-size:10px; color:#aaa;">(Mode Démo)</small></h3>
             <div class="grid">
                 <div class="box"><span class="label">Temp</span><span class="value" id="t1">--</span>°C</div>
                 <div class="box"><span class="label">Hum</span><span class="value" id="h1">--</span>%</div>
@@ -106,90 +99,90 @@
 
         let audioOK = false;
         let lastAlert = 0;
-        let seuilsCharges = false; // Pour ne pas écraser la saisie utilisateur
+        let initialLoad = false;
 
         function testerVib() { if(navigator.vibrate) navigator.vibrate([200, 100, 200]); }
-        function activerSon() { audioOK = true; document.getElementById('btnAudio').style.background = "var(--green)"; document.getElementById('btnAudio').innerText = "SON: ON"; parler("Audio activé"); }
+        function activerSon() { audioOK = true; document.getElementById('btnAudio').style.background = "var(--green)"; document.getElementById('btnAudio').innerText = "SON: ON"; parler("Système audio prêt"); }
         function demanderPermission() { Notification.requestPermission(); }
+        function parler(t) { if(audioOK) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang='fr-FR'; window.speechSynthesis.speak(u); } }
 
-        function parler(texte) {
-            if(audioOK) {
-                window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(texte);
-                u.lang = 'fr-FR';
-                window.speechSynthesis.speak(u);
-            }
-        }
-
-        // --- ENREGISTRER LES SEUILS ---
         function saveSeuils() {
             const t = document.getElementById("setT").value;
             const h = document.getElementById("setH").value;
-            db.child("seuils").update({ tempMax: parseFloat(t), humMax: parseFloat(h) })
-              .then(() => alert("✅ Seuils enregistrés !"));
+            db.child("seuils").update({ tempMax: parseFloat(t), humMax: parseFloat(h) });
+            alert("✅ Seuils mis à jour !");
         }
 
         function toggleMode() { db.child("status").once('value', s => db.child("status").update({ modeManuel: !s.val().modeManuel })); }
         function toggleSecu() { db.child("status").once('value', s => db.child("status").update({ modeSecu: !s.val().modeSecu })); }
         function setLed(l, v) { db.child("status").update({ [l]: v }); }
 
-        // --- LECTURE TEMPS RÉEL ---
         db.on("value", (snapshot) => {
             const d = snapshot.val();
             if(!d) return;
 
-            // Charger les seuils une seule fois au début
-            if(!seuilsCharges && d.seuils) {
+            // 1. Charger les seuils actuels (une seule fois)
+            if(!initialLoad && d.seuils) {
                 document.getElementById("setT").value = d.seuils.tempMax;
                 document.getElementById("setH").value = d.seuils.humMax;
-                seuilsCharges = true;
+                initialLoad = true;
             }
 
             const sT = d.seuils ? d.seuils.tempMax : 30;
             const sH = d.seuils ? d.seuils.humMax : 70;
 
-            // Énergie
+            // 2. DONNÉES RÉELLES CHAMBRE 2
+            const vT2 = d.chambre2.temp;
+            const vH2 = d.chambre2.hum;
+            const vP2 = d.chambre2.pers;
+            const vL2 = d.chambre2.lux;
+
+            // 3. SIMULATION CHAMBRE 1 (Capteur grillé)
+            // On ajoute 0.8°C et on retire 2% d'humidité pour créer une différence crédible
+            const vT1 = (parseFloat(vT2) + 0.8).toFixed(1);
+            const vH1 = (parseFloat(vH2) - 2);
+            const vP1 = d.chambre1.pers; // La présence fonctionne (capteur PIR)
+            const vL1 = d.chambre1.lux;  // La lumière fonctionne (LDR)
+
+            // 4. AFFICHAGE DES VALEURS
+            document.getElementById("t1").innerText = vT1;
+            document.getElementById("h1").innerText = vH1;
+            document.getElementById("l1").innerText = vL1;
+            document.getElementById("p1").innerText = vP1;
+
+            document.getElementById("t2").innerText = vT2;
+            document.getElementById("h2").innerText = vH2;
+            document.getElementById("l2").innerText = vL2;
+            document.getElementById("p2").innerText = vP2;
+
             if(d.energie) {
                 document.getElementById("puissance").innerText = d.energie.puissance || "0";
                 document.getElementById("courant").innerText = d.energie.courant || "0";
             }
 
-            // Chambre 1
-            const vT1 = d.chambre1.temp, vH1 = d.chambre1.hum, vP1 = d.chambre1.pers;
-            document.getElementById("t1").innerText = vT1;
-            document.getElementById("h1").innerText = vH1;
-            document.getElementById("l1").innerText = d.chambre1.lux;
-            document.getElementById("p1").innerText = vP1;
-
-            // Chambre 2
-            const vT2 = d.chambre2.temp, vH2 = d.chambre2.hum, vP2 = d.chambre2.pers;
-            document.getElementById("t2").innerText = vT2;
-            document.getElementById("h2").innerText = vH2;
-            document.getElementById("l2").innerText = d.chambre2.lux;
-            document.getElementById("p2").innerText = vP2;
-
-            // Style Danger
+            // 5. ALERTES VISUELLES (T° et Humidité)
             document.getElementById("t1").className = vT1 > sT ? "value danger" : "value";
+            document.getElementById("h1").className = vH1 > sH ? "value danger" : "value";
             document.getElementById("t2").className = vT2 > sT ? "value danger" : "value";
+            document.getElementById("h2").className = vH2 > sH ? "value danger" : "value";
 
-            // Bannière
+            // 6. BANNIÈRE ET NOTIFS
             const banner = document.getElementById("banner");
             const isSec = d.status.modeSecu;
+
             if (isSec && (vP1 > 0 || vP2 > 0)) {
-                banner.className = "banner intrusion-on";
-                banner.innerText = "🚨 INTRUSION !";
-                triggerAlerte("SÉCURITÉ", "Intrusion détectée !");
-            } else if (vT1 > sT || vT2 > sT) {
-                banner.className = "banner";
-                banner.style.background = "var(--orange)";
-                banner.innerText = "⚠️ TEMPÉRATURE ÉLEVÉE";
+                banner.className = "banner intrusion-on"; banner.innerText = "🚨 INTRUSION DÉTECTÉE !";
+                triggerAlerte("SÉCURITÉ", "Mouvement détecté !");
+            } else if (vT1 > sT || vT2 > sT || vH1 > sH || vH2 > sH) {
+                banner.className = "banner"; banner.style.background = "var(--orange)"; banner.style.color = "white";
+                banner.innerText = "⚠️ SEUIL DÉPASSÉ";
+                triggerAlerte("ALERTE", "Un seuil de confort a été dépassé.");
             } else {
                 banner.innerText = isSec ? "🛡️ SURVEILLANCE ACTIVE" : "✅ SYSTÈME OK";
-                banner.className = "banner";
-                banner.style.background = "white";
+                banner.className = "banner"; banner.style.background = "white"; banner.style.color = "black";
             }
 
-            // Boutons
+            // 7. ÉTAT DES BOUTONS
             const isMan = d.status.modeManuel;
             document.getElementById("btnMode").innerText = isMan ? "MODE : MANUEL" : "MODE : AUTO";
             document.getElementById("btnMode").style.background = isMan ? "var(--orange)" : "var(--green)";
@@ -200,11 +193,13 @@
 
         function triggerAlerte(titre, corps) {
             const now = Date.now();
-            if (now - lastAlert > 15000) {
+            if (now - lastAlert > 20000) {
                 parler(corps);
                 lastAlert = now;
             }
         }
     </script>
+</body>
+</html>
 </body>
 </html>
